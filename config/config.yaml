@@ -1,0 +1,32 @@
+query:
+  keywords: ["large language model"]
+  categories: []
+  max_results: 10
+  sort_by: submittedDate
+  sort_order: descending
+
+pipeline:
+  download_pdf: true
+  parse_pdf: true
+  summarize: true
+  output_markdown: true
+  language: zh
+  summary_level: standard
+
+model:
+  provider: deepseek
+  base_url: "https://api.deepseek.com/v1"
+  model_name: "deepseek-chat"
+  api_key_env: DEEPSEEK_API_KEY
+  temperature: 0.2
+  max_tokens: 4000
+
+output:
+  base_dir: ./data
+  overwrite: false
+
+runtime:
+  retry_times: 3
+  timeout_sec: 60
+  dry_run: false
+  continue_on_error: true
