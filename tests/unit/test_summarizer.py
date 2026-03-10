@@ -9,6 +9,12 @@ from models import Paper, PaperStatus
 from summarizer import PaperSummarizer
 
 
+@pytest.fixture(autouse=True)
+def set_api_key(monkeypatch):
+    """Set fake API key for all tests."""
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "fake-api-key")
+
+
 @pytest.mark.asyncio
 async def test_summarize_success():
     """Test successful paper summarization."""
@@ -30,16 +36,7 @@ async def test_summarize_success():
         parsed_text="This is the full paper text content...",
     )
 
-    mock_response = AsyncMock()
-    mock_response.choices = [type("Choice", (), {
-        "message": type("Message", (), {
-            "content": '{"research_problem": "Test problem", "core_method": "Test method"}'
-        })()
-    })()]
-
-    with patch("summarizer.AsyncOpenAI") as mock_client:
-        mock_client.return_value.chat.completions.create = AsyncMock(return_value=mock_response)
-
+    with patch.object(summarizer, "_call_llm", return_value='{"research_problem": "Test problem", "core_method": "Test method"}'):
         result = await summarizer.summarize(paper)
 
     assert result.summary is not None
