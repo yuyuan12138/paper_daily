@@ -38,66 +38,60 @@ runtime:
 
     config = Config.from_yaml(config_file)
 
-    runner = PipelineRunner(config)
+    # Setup mocks
+    from models import Paper, PaperStatus
+
+    sample_paper = Paper(
+        arxiv_id="2401.12345",
+        title="Test Paper",
+        authors=["Author"],
+        abstract="Test abstract",
+        submitted_date=datetime.now(),
+        categories=["cs.AI"],
+        pdf_url="https://arxiv.org/pdf/2401.12345.pdf",
+    )
+
+    # Mock fetcher
+    mock_fetcher = AsyncMock()
+    mock_fetcher.fetch = AsyncMock(return_value=[sample_paper])
+
+    # Mock downloader
+    mock_downloader = AsyncMock()
+    mock_downloader.download = AsyncMock(
+        return_value=Paper(
+            **{**sample_paper.__dict__, "pdf_path": tmp_path / "test.pdf", "status": PaperStatus.downloaded}
+        )
+    )
+
+    # Mock parser
+    mock_parser = AsyncMock()
+    mock_parser.parse = AsyncMock(
+        return_value=Paper(
+            **{**sample_paper.__dict__, "parsed_text": "Test text", "status": PaperStatus.parsed}
+        )
+    )
+
+    # Mock summarizer
+    mock_summarizer = AsyncMock()
+    mock_summarizer.summarize = AsyncMock(
+        return_value=Paper(
+            **{**sample_paper.__dict__, "summary": {"test": "data"}, "status": PaperStatus.summarized}
+        )
+    )
+
+    # Mock renderer
+    mock_renderer = MagicMock()
+    mock_output = tmp_path / "output.md"
+    mock_output.write_text("test")
+    mock_renderer.render = MagicMock(return_value=mock_output)
 
     # Mock all external dependencies
-    with patch("runner.ArXivFetcher") as mock_fetcher_class:
-        with patch("runner.PDFDownloader") as mock_downloader_class:
-            with patch("runner.PDFParser") as mock_parser_class:
-                with patch("runner.PaperSummarizer") as mock_summarizer_class:
-                    with patch("runner.MarkdownRenderer") as mock_renderer_class:
-
-                        # Setup mocks
-                        from models import Paper, PaperStatus
-
-                        sample_paper = Paper(
-                            arxiv_id="2401.12345",
-                            title="Test Paper",
-                            authors=["Author"],
-                            abstract="Test abstract",
-                            submitted_date=datetime.now(),
-                            categories=["cs.AI"],
-                            pdf_url="https://arxiv.org/pdf/2401.12345.pdf",
-                        )
-
-                        # Mock fetcher
-                        mock_fetcher = AsyncMock()
-                        mock_fetcher.fetch = AsyncMock(return_value=[sample_paper])
-                        mock_fetcher_class.return_value = mock_fetcher
-
-                        # Mock downloader
-                        mock_downloader = AsyncMock()
-                        mock_downloader.download = AsyncMock(
-                            return_value=Paper(
-                                **{**sample_paper.__dict__, "pdf_path": tmp_path / "test.pdf", "status": PaperStatus.downloaded}
-                            )
-                        )
-                        mock_downloader_class.return_value = mock_downloader
-
-                        # Mock parser
-                        mock_parser = AsyncMock()
-                        mock_parser.parse = AsyncMock(
-                            return_value=Paper(
-                                **{**sample_paper.__dict__, "parsed_text": "Test text", "status": PaperStatus.parsed}
-                            )
-                        )
-                        mock_parser_class.return_value = mock_parser
-
-                        # Mock summarizer
-                        mock_summarizer = AsyncMock()
-                        mock_summarizer.summarize = AsyncMock(
-                            return_value=Paper(
-                                **{**sample_paper.__dict__, "summary": {"test": "data"}, "status": PaperStatus.summarized}
-                            )
-                        )
-                        mock_summarizer_class.return_value = mock_summarizer
-
-                        # Mock renderer
-                        mock_renderer = MagicMock()
-                        mock_output = tmp_path / "output.md"
-                        mock_output.write_text("test")
-                        mock_renderer.render = MagicMock(return_value=mock_output)
-                        mock_renderer_class.return_value = mock_renderer
+    with patch("runner.ArXivFetcher", return_value=mock_fetcher):
+        with patch("runner.PDFDownloader", return_value=mock_downloader):
+            with patch("runner.PDFParser", return_value=mock_parser):
+                with patch("runner.PaperSummarizer", return_value=mock_summarizer):
+                    with patch("runner.MarkdownRenderer", return_value=mock_renderer):
+                        runner = PipelineRunner(config)
 
                         # Run pipeline
                         results = await runner.run()
@@ -125,24 +119,24 @@ output:
     config_file.write_text(config_content)
 
     config = Config.from_yaml(config_file)
-    runner = PipelineRunner(config)
 
-    with patch("runner.ArXivFetcher") as mock_fetcher_class:
-        from models import Paper
+    from models import Paper
 
-        sample_paper = Paper(
-            arxiv_id="2401.12345",
-            title="Test",
-            authors=["A"],
-            abstract="Abs",
-            submitted_date=datetime.now(),
-            categories=["cs.AI"],
-            pdf_url="https://arxiv.org/pdf/test.pdf",
-        )
+    sample_paper = Paper(
+        arxiv_id="2401.12345",
+        title="Test",
+        authors=["A"],
+        abstract="Abs",
+        submitted_date=datetime.now(),
+        categories=["cs.AI"],
+        pdf_url="https://arxiv.org/pdf/test.pdf",
+    )
 
-        mock_fetcher = AsyncMock()
-        mock_fetcher.fetch = AsyncMock(return_value=[sample_paper])
-        mock_fetcher_class.return_value = mock_fetcher
+    mock_fetcher = AsyncMock()
+    mock_fetcher.fetch = AsyncMock(return_value=[sample_paper])
+
+    with patch("runner.ArXivFetcher", return_value=mock_fetcher):
+        runner = PipelineRunner(config)
 
         results = await runner.run()
 
@@ -178,72 +172,68 @@ runtime:
     config_file.write_text(config_content)
 
     config = Config.from_yaml(config_file)
-    runner = PipelineRunner(config)
 
-    # Add a processed paper to state
-    runner.state.update_paper_status("2401.12345", "summarized")
+    from models import Paper, PaperStatus
 
-    with patch("runner.ArXivFetcher") as mock_fetcher_class:
-        with patch("runner.PDFDownloader") as mock_downloader_class:
-            with patch("runner.PDFParser") as mock_parser_class:
-                with patch("runner.PaperSummarizer") as mock_summarizer_class:
-                    with patch("runner.MarkdownRenderer") as mock_renderer_class:
-                        from models import Paper, PaperStatus
+    # Two papers: one already processed, one new
+    processed_paper = Paper(
+        arxiv_id="2401.12345",
+        title="Processed Paper",
+        authors=["A"],
+        abstract="Abs",
+        submitted_date=datetime.now(),
+        categories=["cs.AI"],
+        pdf_url="https://arxiv.org/pdf/test.pdf",
+    )
 
-                        # Two papers: one already processed, one new
-                        processed_paper = Paper(
-                            arxiv_id="2401.12345",
-                            title="Processed Paper",
-                            authors=["A"],
-                            abstract="Abs",
-                            submitted_date=datetime.now(),
-                            categories=["cs.AI"],
-                            pdf_url="https://arxiv.org/pdf/test.pdf",
-                        )
+    new_paper = Paper(
+        arxiv_id="2401.67890",
+        title="New Paper",
+        authors=["B"],
+        abstract="Abs",
+        submitted_date=datetime.now(),
+        categories=["cs.AI"],
+        pdf_url="https://arxiv.org/pdf/test2.pdf",
+    )
 
-                        new_paper = Paper(
-                            arxiv_id="2401.67890",
-                            title="New Paper",
-                            authors=["B"],
-                            abstract="Abs",
-                            submitted_date=datetime.now(),
-                            categories=["cs.AI"],
-                            pdf_url="https://arxiv.org/pdf/test2.pdf",
-                        )
+    mock_fetcher = AsyncMock()
+    mock_fetcher.fetch = AsyncMock(return_value=[processed_paper, new_paper])
 
-                        mock_fetcher = AsyncMock()
-                        mock_fetcher.fetch = AsyncMock(return_value=[processed_paper, new_paper])
-                        mock_fetcher_class.return_value = mock_fetcher
+    mock_downloader = AsyncMock()
+    mock_downloader.download = AsyncMock(
+        return_value=Paper(
+            **{**new_paper.__dict__, "pdf_path": tmp_path / "test.pdf", "status": PaperStatus.downloaded}
+        )
+    )
 
-                        mock_downloader = AsyncMock()
-                        mock_downloader.download = AsyncMock(
-                            return_value=Paper(
-                                **{**new_paper.__dict__, "pdf_path": tmp_path / "test.pdf", "status": PaperStatus.downloaded}
-                            )
-                        )
-                        mock_downloader_class.return_value = mock_downloader
+    mock_parser = AsyncMock()
+    mock_parser.parse = AsyncMock(
+        return_value=Paper(
+            **{**new_paper.__dict__, "parsed_text": "Test", "status": PaperStatus.parsed}
+        )
+    )
 
-                        mock_parser = AsyncMock()
-                        mock_parser.parse = AsyncMock(
-                            return_value=Paper(
-                                **{**new_paper.__dict__, "parsed_text": "Test", "status": PaperStatus.parsed}
-                            )
-                        )
-                        mock_parser_class.return_value = mock_parser
+    mock_summarizer = AsyncMock()
+    mock_summarizer.summarize = AsyncMock(
+        return_value=Paper(
+            **{**new_paper.__dict__, "summary": {}, "status": PaperStatus.summarized}
+        )
+    )
 
-                        mock_summarizer = AsyncMock()
-                        mock_summarizer.summarize = AsyncMock(
-                            return_value=Paper(
-                                **{**new_paper.__dict__, "summary": {}, "status": PaperStatus.summarized}
-                            )
-                        )
-                        mock_summarizer_class.return_value = mock_summarizer
+    mock_renderer = MagicMock()
+    mock_output = tmp_path / "output.md"
+    mock_output.write_text("test")
+    mock_renderer.render = MagicMock(return_value=mock_output)
 
-                        mock_renderer = MagicMock()
-                        mock_output = tmp_path / "output.md"
-                        mock_output.write_text("test")
-                        mock_renderer.render = MagicMock(return_value=mock_output)
-                        mock_renderer_class.return_value = mock_renderer
+    with patch("runner.ArXivFetcher", return_value=mock_fetcher):
+        with patch("runner.PDFDownloader", return_value=mock_downloader):
+            with patch("runner.PDFParser", return_value=mock_parser):
+                with patch("runner.PaperSummarizer", return_value=mock_summarizer):
+                    with patch("runner.MarkdownRenderer", return_value=mock_renderer):
+                        runner = PipelineRunner(config)
+
+                        # Add a processed paper to state
+                        runner.state.update_paper_status("2401.12345", PaperStatus.summarized)
 
                         results = await runner.run()
 

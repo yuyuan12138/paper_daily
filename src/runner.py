@@ -1,0 +1,141 @@
+"""Pipeline orchestration module."""
+
+import logging
+from datetime import datetime
+from pathlib import Path
+
+from config import Config
+from models import Paper, PaperStatus
+from state_manager import StateManager
+from fetcher import ArXivFetcher
+from downloader import PDFDownloader
+from parser import PDFParser
+from summarizer import PaperSummarizer
+from renderer import MarkdownRenderer
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
+
+
+class PipelineRunner:
+    """Orchestrates the paper processing pipeline."""
+
+    def __init__(self, config: Config) -> None:
+        """Initialize pipeline with configuration."""
+        self.config = config
+        self.state = StateManager(Path("state/paper_state.json"))
+        self.state.load()
+
+        # Initialize modules
+        self.fetcher = ArXivFetcher(config.query)
+        self.downloader = PDFDownloader(
+            base_dir=config.output.base_dir,
+            retry_times=config.runtime.retry_times,
+            timeout_sec=config.runtime.timeout_sec,
+        )
+        self.parser = PDFParser()
+        self.summarizer = PaperSummarizer(
+            model_config=config.model,
+            language=config.pipeline.language,
+            summary_level=config.pipeline.summary_level,
+        )
+        self.renderer = MarkdownRenderer(
+            output_dir=config.output.base_dir / "summaries"
+        )
+
+    async def run(self) -> dict:
+        """Execute the pipeline."""
+        logger.info("Starting paper pipeline run")
+        start_time = datetime.now()
+
+        # Fetch papers
+        papers = await self.fetcher.fetch()
+        logger.info(f"Fetched {len(papers)} papers from arXiv")
+
+        # Filter out already processed papers
+        new_papers = [p for p in papers if not self.state.is_paper_processed(p.arxiv_id)]
+        logger.info(f"{len(new_papers)} new papers to process")
+
+        if self.config.runtime.dry_run:
+            logger.info("Dry run mode - skipping processing")
+            return {
+                "processed": [],
+                "failed": [],
+                "metrics": {
+                    "total": len(papers),
+                    "new": len(new_papers),
+                    "processed": 0,
+                    "failed": 0,
+                    "duration_seconds": 0,
+                },
+            }
+
+        processed = []
+        failed = []
+
+        for paper in new_papers:
+            try:
+                # Download
+                if self.config.pipeline.download_pdf:
+                    paper = await self.downloader.download(paper)
+                    self.state.update_paper_status(paper.arxiv_id, paper.status, pdf_path=paper.pdf_path)
+
+                    if paper.status == PaperStatus.failed:
+                        failed.append(paper.arxiv_id)
+                        continue
+
+                # Parse
+                if self.config.pipeline.parse_pdf:
+                    paper = await self.parser.parse(paper)
+                    self.state.update_paper_status(paper.arxiv_id, paper.status)
+
+                    if paper.status == PaperStatus.failed:
+                        failed.append(paper.arxiv_id)
+                        continue
+
+                # Summarize
+                if self.config.pipeline.summarize:
+                    paper = await self.summarizer.summarize(paper)
+                    self.state.update_paper_status(paper.arxiv_id, paper.status)
+
+                    if paper.status == PaperStatus.failed:
+                        failed.append(paper.arxiv_id)
+                        continue
+
+                # Render
+                if self.config.pipeline.output_markdown:
+                    markdown_path = self.renderer.render(paper)
+                    self.state.update_paper_status(
+                        paper.arxiv_id, paper.status, markdown_path=markdown_path
+                    )
+
+                processed.append(paper.arxiv_id)
+                logger.info(f"Successfully processed {paper.arxiv_id}")
+
+            except Exception as e:
+                logger.error(f"Error processing {paper.arxiv_id}: {e}")
+                self.state.update_paper_status(paper.arxiv_id, PaperStatus.failed, error=str(e))
+                if not self.config.runtime.continue_on_error:
+                    raise
+                failed.append(paper.arxiv_id)
+
+        # Save state
+        self.state.update_last_run()
+        self.state.save()
+
+        duration = (datetime.now() - start_time).total_seconds()
+
+        return {
+            "processed": processed,
+            "failed": failed,
+            "metrics": {
+                "total": len(papers),
+                "new": len(new_papers),
+                "processed": len(processed),
+                "failed": len(failed),
+                "duration_seconds": duration,
+            },
+        }
