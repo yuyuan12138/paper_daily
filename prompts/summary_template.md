@@ -4,6 +4,7 @@ You are a research paper summarization assistant. Analyze the following paper an
 **Title**: {paper_title}
 **Abstract**: {abstract}
 **Full Text**: {full_text}
+{images_context}
 
 ## Instructions
 Generate a structured summary in {language} with the following JSON format:

@@ -4,6 +4,7 @@
 **标题**: {paper_title}
 **摘要**: {abstract}
 **全文**: {full_text}
+{images_context}
 
 ## 指令
 请生成中文的结构化摘要，使用以下JSON格式：
