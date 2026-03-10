@@ -1,7 +1,6 @@
 """Tests for LLM summarizer module."""
 
 from datetime import datetime
-from pathlib import Path
 from unittest.mock import patch, AsyncMock
 import pytest
 from config import ModelConfig

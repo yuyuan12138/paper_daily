@@ -1,6 +1,5 @@
 """Tests for PDF downloader module."""
 
-from pathlib import Path
 from datetime import datetime
 from unittest.mock import AsyncMock, patch, MagicMock
 import pytest

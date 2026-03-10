@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 from config import Config
-from models import Paper, PaperStatus
+from models import PaperStatus
 from state_manager import StateManager
 from fetcher import ArXivFetcher
 from downloader import PDFDownloader

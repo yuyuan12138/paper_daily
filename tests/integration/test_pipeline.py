@@ -1,7 +1,6 @@
 """Integration tests for the pipeline runner."""
 
 from datetime import datetime
-from pathlib import Path
 from unittest.mock import patch, AsyncMock, MagicMock
 import pytest
 from config import Config
@@ -230,12 +229,24 @@ runtime:
             with patch("runner.PDFParser", return_value=mock_parser):
                 with patch("runner.PaperSummarizer", return_value=mock_summarizer):
                     with patch("runner.MarkdownRenderer", return_value=mock_renderer):
-                        runner = PipelineRunner(config)
+                        with patch("runner.StateManager") as mock_state_class:
+                            # Create a mock state manager
+                            mock_state = MagicMock()
+                            mock_state.is_paper_processed = MagicMock(return_value=False)
+                            mock_state.update_paper_status = MagicMock()
+                            mock_state.update_last_run = MagicMock()
+                            mock_state.save = MagicMock()
+                            mock_state_class.return_value = mock_state
 
-                        # Add a processed paper to state
-                        runner.state.update_paper_status("2401.12345", PaperStatus.summarized)
+                            runner = PipelineRunner(config)
 
-                        results = await runner.run()
+                            # Make is_paper_processed return True for the first paper
+                            def side_effect(arxiv_id):
+                                return arxiv_id == "2401.12345"
+
+                            mock_state.is_paper_processed.side_effect = side_effect
+
+                            results = await runner.run()
 
     # Should only process the new paper
     assert results["metrics"]["total"] == 2

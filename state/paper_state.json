@@ -1,0 +1,19 @@
+{
+  "last_run": "2026-03-10T12:33:01.929439",
+  "papers": {
+    "2401.12345": {
+      "status": "summarized",
+      "updated_at": "2026-03-10T12:31:13.903509",
+      "pdf_path": "/tmp/pytest-of-yuyuan/pytest-19/test_pipeline_full_run0/test.pdf",
+      "error": null,
+      "markdown_path": "/tmp/pytest-of-yuyuan/pytest-19/test_pipeline_full_run0/output.md"
+    },
+    "2401.67890": {
+      "status": "summarized",
+      "updated_at": "2026-03-10T12:30:36.017002",
+      "pdf_path": "/tmp/pytest-of-yuyuan/pytest-19/test_pipeline_skip_processed_p0/test.pdf",
+      "error": null,
+      "markdown_path": "/tmp/pytest-of-yuyuan/pytest-19/test_pipeline_skip_processed_p0/output.md"
+    }
+  }
+}

@@ -1,8 +1,6 @@
 """ArXiv paper fetcher using the arxiv library."""
 
 import re
-from datetime import datetime
-from typing import Self
 
 import arxiv
 
@@ -41,19 +39,19 @@ class ArXivFetcher:
         )
 
         papers = []
-        with arxiv.Client() as client:
-            for result in client.results(search):
-                paper = Paper(
-                    arxiv_id=self._extract_arxiv_id(result.entry_id),
-                    title=result.title,
-                    authors=[a.name for a in result.authors],
-                    abstract=result.summary.replace("\n", " ").strip(),
-                    submitted_date=result.published,
-                    categories=result.categories,
-                    pdf_url=result.pdf_url,
-                    status=PaperStatus.discovered,
-                )
-                papers.append(paper)
+        client = arxiv.Client()
+        for result in client.results(search):
+            paper = Paper(
+                arxiv_id=self._extract_arxiv_id(result.entry_id),
+                title=result.title,
+                authors=[a.name for a in result.authors],
+                abstract=result.summary.replace("\n", " ").strip(),
+                submitted_date=result.published,
+                categories=result.categories,
+                pdf_url=result.pdf_url,
+                status=PaperStatus.discovered,
+            )
+            papers.append(paper)
 
         return papers
 

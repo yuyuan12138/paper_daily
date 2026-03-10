@@ -1,0 +1,2 @@
+[console_scripts]
+paper-daily = main:main

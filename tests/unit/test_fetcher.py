@@ -1,11 +1,11 @@
 from datetime import datetime
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch, MagicMock
 
 import pytest
 
 from config import QueryConfig
 from fetcher import ArXivFetcher
-from models import Paper, PaperStatus
+from models import PaperStatus
 
 
 @pytest.mark.asyncio
@@ -30,7 +30,9 @@ async def test_fetch_papers_by_keywords():
                 "pdf_url": "http://arxiv.org/pdf/2401.12345.pdf",
             })()
         ]
-        mock_client.return_value.__enter__.return_value.results.return_value = mock_results
+        mock_client_instance = MagicMock()
+        mock_client_instance.results.return_value = mock_results
+        mock_client.return_value = mock_client_instance
 
         papers = await fetcher.fetch()
 

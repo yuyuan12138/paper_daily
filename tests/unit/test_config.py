@@ -1,9 +1,8 @@
 """Unit tests for configuration module."""
 
-from pathlib import Path
 from pydantic import ValidationError
 import pytest
-from config import Config, QueryConfig, PipelineConfig, ModelConfig, OutputConfig, RuntimeConfig
+from config import Config, QueryConfig, PipelineConfig, ModelConfig, RuntimeConfig
 
 
 def test_query_config_validation():

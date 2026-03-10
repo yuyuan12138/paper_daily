@@ -2,7 +2,6 @@
 
 from datetime import datetime
 from pathlib import Path
-import pytest
 from models import Paper, PaperStatus
 from renderer import MarkdownRenderer
 

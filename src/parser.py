@@ -1,7 +1,6 @@
 """PDF text extraction module."""
 
 import re
-from pathlib import Path
 
 from pypdf import PdfReader
 
@@ -39,7 +38,7 @@ class PDFParser:
             paper.status = PaperStatus.parsed
             return paper
 
-        except Exception as e:
+        except Exception:
             # Mark as failed on any parsing error
             paper.status = PaperStatus.failed
             return paper

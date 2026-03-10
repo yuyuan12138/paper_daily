@@ -11,6 +11,14 @@ from config import Config
 app = typer.Typer()
 
 
+async def run_pipeline(cfg: Config):
+    """Run the pipeline asynchronously."""
+    from runner import PipelineRunner
+
+    runner = PipelineRunner(cfg)
+    return await runner.run()
+
+
 @app.command()
 def main(
     config: Path = typer.Option(Path("config/config.yaml"), "--config", help="Path to config file"),
@@ -32,25 +40,19 @@ def main(
     if max_papers:
         cfg.query.max_results = max_papers
 
-    # Import here to avoid circular imports
-    from runner import PipelineRunner
+    # Run pipeline
+    results = asyncio.run(run_pipeline(cfg))
 
-    async def run():
-        runner = PipelineRunner(cfg)
-        results = await runner.run()
+    # Print results
+    typer.echo("\n=== Pipeline Results ===")
+    typer.echo(f"Total papers found: {results['metrics']['total']}")
+    typer.echo(f"New papers: {results['metrics']['new']}")
+    typer.echo(f"Successfully processed: {results['metrics']['processed']}")
+    typer.echo(f"Failed: {results['metrics']['failed']}")
+    typer.echo(f"Duration: {results['metrics']['duration_seconds']:.1f}s")
 
-        # Print results
-        typer.echo(f"\n=== Pipeline Results ===")
-        typer.echo(f"Total papers found: {results['metrics']['total']}")
-        typer.echo(f"New papers: {results['metrics']['new']}")
-        typer.echo(f"Successfully processed: {results['metrics']['processed']}")
-        typer.echo(f"Failed: {results['metrics']['failed']}")
-        typer.echo(f"Duration: {results['metrics']['duration_seconds']:.1f}s")
-
-        if results["failed"]:
-            typer.echo(f"\nFailed papers: {', '.join(results['failed'])}")
-
-    asyncio.run(run())
+    if results["failed"]:
+        typer.echo(f"\nFailed papers: {', '.join(results['failed'])}")
 
 
 if __name__ == "__main__":
