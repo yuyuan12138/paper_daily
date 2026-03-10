@@ -9,9 +9,13 @@ from parser import PDFParser
 
 
 @pytest.mark.asyncio
-async def test_parse_pdf_success():
+async def test_parse_pdf_success(tmp_path):
     """Test successful PDF text extraction."""
     parser = PDFParser()
+
+    # Create a fake PDF file
+    pdf_path = tmp_path / "test.pdf"
+    pdf_path.write_bytes(b"fake pdf content")
 
     paper = Paper(
         arxiv_id="2401.12345",
@@ -21,7 +25,7 @@ async def test_parse_pdf_success():
         submitted_date=datetime.now(),
         categories=["cs.AI"],
         pdf_url="https://arxiv.org/pdf/2401.12345.pdf",
-        pdf_path=Path("/fake/path/2401.12345.pdf"),
+        pdf_path=pdf_path,
     )
 
     with patch("parser.PdfReader") as mock_reader:
@@ -37,9 +41,13 @@ async def test_parse_pdf_success():
 
 
 @pytest.mark.asyncio
-async def test_parse_pdf_cleans_text():
+async def test_parse_pdf_cleans_text(tmp_path):
     """Test that parser cleans excessive whitespace."""
     parser = PDFParser()
+
+    # Create a fake PDF file
+    pdf_path = tmp_path / "test.pdf"
+    pdf_path.write_bytes(b"fake pdf content")
 
     paper = Paper(
         arxiv_id="2401.12345",
@@ -49,7 +57,7 @@ async def test_parse_pdf_cleans_text():
         submitted_date=datetime.now(),
         categories=["cs.AI"],
         pdf_url="https://arxiv.org/pdf/2401.12345.pdf",
-        pdf_path=Path("/fake/path/2401.12345.pdf"),
+        pdf_path=pdf_path,
     )
 
     with patch("parser.PdfReader") as mock_reader:
@@ -85,9 +93,13 @@ async def test_parse_pdf_missing_file():
 
 
 @pytest.mark.asyncio
-async def test_parse_pdf_encrypted():
+async def test_parse_pdf_encrypted(tmp_path):
     """Test handling encrypted/password-protected PDFs."""
     parser = PDFParser()
+
+    # Create a fake PDF file
+    pdf_path = tmp_path / "test.pdf"
+    pdf_path.write_bytes(b"fake pdf content")
 
     paper = Paper(
         arxiv_id="2401.12345",
@@ -97,7 +109,7 @@ async def test_parse_pdf_encrypted():
         submitted_date=datetime.now(),
         categories=["cs.AI"],
         pdf_url="https://arxiv.org/pdf/2401.12345.pdf",
-        pdf_path=Path("/fake/path/2401.12345.pdf"),
+        pdf_path=pdf_path,
     )
 
     with patch("parser.PdfReader") as mock_reader:
@@ -109,9 +121,13 @@ async def test_parse_pdf_encrypted():
 
 
 @pytest.mark.asyncio
-async def test_parse_empty_pdf():
+async def test_parse_empty_pdf(tmp_path):
     """Test handling PDF with no extractable text."""
     parser = PDFParser()
+
+    # Create a fake PDF file
+    pdf_path = tmp_path / "test.pdf"
+    pdf_path.write_bytes(b"fake pdf content")
 
     paper = Paper(
         arxiv_id="2401.12345",
@@ -121,7 +137,7 @@ async def test_parse_empty_pdf():
         submitted_date=datetime.now(),
         categories=["cs.AI"],
         pdf_url="https://arxiv.org/pdf/2401.12345.pdf",
-        pdf_path=Path("/fake/path/2401.12345.pdf"),
+        pdf_path=pdf_path,
     )
 
     with patch("parser.PdfReader") as mock_reader:
