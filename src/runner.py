@@ -4,16 +4,16 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from src.config import Config
-from src.models import PaperStatus
-from src.state_manager import StateManager
-from src.fetcher import ArXivFetcher
-from src.downloader import PDFDownloader
-from src.parser import PDFParser
-from src.summarizer import PaperSummarizer
-from src.renderer import MarkdownRenderer
-from src.image_extractor import ImageExtractor
-from src.image_analyzer import ImageAnalyzer
+from config import Config
+from models import PaperStatus
+from state_manager import StateManager
+from fetcher import ArXivFetcher
+from downloader import PDFDownloader
+from parser import PDFParser
+from summarizer import PaperSummarizer
+from renderer import MarkdownRenderer
+from image_extractor import ImageExtractor
+from image_analyzer import ImageAnalyzer
 
 logging.basicConfig(
     level=logging.INFO,

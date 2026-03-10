@@ -10,7 +10,7 @@ import pytest
 from openai import AsyncOpenAI
 
 from models import Paper, PaperStatus, ImageMetadata, ImageAnalysis
-from src.image_analyzer import ImageAnalyzer
+from image_analyzer import ImageAnalyzer
 
 
 class TestImageAnalyzerInitialization:

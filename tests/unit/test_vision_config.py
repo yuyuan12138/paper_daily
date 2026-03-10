@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
-from src.config import Config, VisionConfig
+from config import Config, VisionConfig
 
 
 def test_vision_config_validation():

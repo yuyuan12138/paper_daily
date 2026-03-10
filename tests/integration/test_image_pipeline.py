@@ -5,9 +5,9 @@ from pathlib import Path
 from unittest.mock import patch, AsyncMock, MagicMock
 import pytest
 
-from src.config import Config
-from src.runner import PipelineRunner
-from src.models import Paper, PaperStatus
+from config import Config
+from runner import PipelineRunner
+from models import Paper, PaperStatus
 
 
 @pytest.mark.asyncio
@@ -71,7 +71,7 @@ runtime:
     mock_fetcher = AsyncMock()
     mock_fetcher.fetch = AsyncMock(return_value=[sample_paper])
 
-    with patch("src.runner.ArXivFetcher", return_value=mock_fetcher):
+    with patch("runner.ArXivFetcher", return_value=mock_fetcher):
         runner = PipelineRunner(config)
 
         # Verify image modules are initialized
@@ -129,7 +129,7 @@ runtime:
     mock_fetcher = AsyncMock()
     mock_fetcher.fetch = AsyncMock(return_value=[sample_paper])
 
-    with patch("src.runner.ArXivFetcher", return_value=mock_fetcher):
+    with patch("runner.ArXivFetcher", return_value=mock_fetcher):
         runner = PipelineRunner(config)
 
         # Verify image modules are NOT initialized
