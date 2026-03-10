@@ -61,7 +61,7 @@ class PaperSummarizer:
         """Create image context string for prompts.
 
         Args:
-            images: List of ImageMetadata objects with analysis
+            images: List of ImageMetadata objects with analysis or captions
 
         Returns:
             Formatted image context string, or empty string if no images
@@ -71,6 +71,7 @@ class PaperSummarizer:
 
         image_sections = []
         for idx, image in enumerate(images, start=1):
+            # Use LLM analysis if available
             if image.analysis:
                 key_findings = ", ".join(image.analysis.key_findings)
                 section = (
@@ -79,7 +80,18 @@ class PaperSummarizer:
                     f"- Key Findings: {key_findings}\n"
                     f"- Relevance: {image.analysis.relevance}"
                 )
-                image_sections.append(section)
+            # Fall back to extracted caption
+            elif image.caption or image.figure_number:
+                fig_num = image.figure_number or f"{idx}"
+                caption = image.caption or "No caption available"
+                section = (
+                    f"Figure {fig_num} (Page {image.page_number}):\n"
+                    f"- Caption: {caption}"
+                )
+            else:
+                continue  # Skip images with no context
+
+            image_sections.append(section)
 
         return "\n\n".join(image_sections)
 

@@ -15,7 +15,8 @@
   "experiments": "进行了什么实验？主要结果是什么？",
   "limitations": "有哪些局限性或未来工作？",
   "keywords": ["关键词1", "关键词2", "关键词3"],
-  "applicable_scenarios": "这种方法在什么场景下有用？"
+  "applicable_scenarios": "这种方法在什么场景下有用？",
+  "figures": "必须包含论文中提到的图表信息，格式：图X-描述"
 }}
 
-保持摘要{summary_level}，专注于技术细节。
+**重要**：必须包含figures字段，描述论文中提到的图表内容。

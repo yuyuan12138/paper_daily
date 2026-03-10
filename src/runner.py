@@ -57,14 +57,18 @@ class PipelineRunner:
                 skip_duplicates=config.vision.extraction.skip_duplicates,
                 output_dir=config.vision.storage.output_dir,
             )
-            self.image_analyzer = ImageAnalyzer(
-                provider=config.vision.analysis.provider,
-                model_name=config.vision.analysis.model_name,
-                api_key_env=config.vision.analysis.api_key_env,
-                base_url=config.vision.analysis.base_url,
-                max_tokens=config.vision.analysis.max_tokens,
-                batch_size=config.vision.analysis.batch_size,
-            )
+            # Only initialize analyzer if analysis config is provided
+            if config.vision.analysis:
+                self.image_analyzer = ImageAnalyzer(
+                    provider=config.vision.analysis.provider,
+                    model_name=config.vision.analysis.model_name,
+                    api_key_env=config.vision.analysis.api_key_env,
+                    base_url=config.vision.analysis.base_url,
+                    max_tokens=config.vision.analysis.max_tokens,
+                    batch_size=config.vision.analysis.batch_size,
+                )
+            else:
+                self.image_analyzer = None
         else:
             self.image_extractor = None
             self.image_analyzer = None

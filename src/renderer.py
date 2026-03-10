@@ -98,6 +98,11 @@ class MarkdownRenderer:
                 lines.append("### Applicable Scenarios")
                 lines.append(paper.summary["applicable_scenarios"])
                 lines.append("")
+
+            if "figures" in paper.summary:
+                lines.append("### Figures")
+                lines.append(paper.summary["figures"])
+                lines.append("")
         else:
             lines.append("## Summary")
             lines.append("*No summary available.*")

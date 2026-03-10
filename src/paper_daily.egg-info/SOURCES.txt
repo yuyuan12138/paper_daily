@@ -1,6 +1,17 @@
+README.md
 pyproject.toml
 src/__init__.py
+src/config.py
+src/downloader.py
+src/fetcher.py
+src/image_analyzer.py
+src/image_extractor.py
 src/models.py
+src/parser.py
+src/renderer.py
+src/runner.py
+src/state_manager.py
+src/summarizer.py
 src/paper_daily.egg-info/PKG-INFO
 src/paper_daily.egg-info/SOURCES.txt
 src/paper_daily.egg-info/dependency_links.txt
