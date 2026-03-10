@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
+from typing import Any
 
 
 class PaperStatus(Enum):
@@ -29,5 +30,8 @@ class Paper:
     pdf_url: str
     pdf_path: Path | None = None
     parsed_text: str | None = None
-    summary: dict | None = None
+    summary: dict[str, Any] | None = None
     status: PaperStatus = PaperStatus.discovered
+
+
+__all__ = ["Paper", "PaperStatus"]
