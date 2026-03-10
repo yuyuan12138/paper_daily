@@ -55,6 +55,43 @@ class RuntimeConfig(BaseModel):
     continue_on_error: bool = True
 
 
+class VisionExtractionConfig(BaseModel):
+    """Configuration for image extraction from PDFs."""
+
+    min_size: tuple[int, int] = (200, 200)
+    max_aspect_ratio: float = 3.0
+    max_images_per_paper: int = Field(gt=0, le=50, default=20)
+    skip_duplicates: bool = True
+
+
+class VisionAnalysisConfig(BaseModel):
+    """Configuration for image analysis using LLMs."""
+
+    provider: str = Field(pattern="^(openai|anthropic)$", default="openai")
+    model_name: str = "gpt-4o"
+    api_key_env: str = "OPENAI_API_KEY"
+    base_url: str | None = None
+    max_tokens: int = Field(gt=0, le=4000, default=1000)
+    batch_size: int = Field(gt=0, le=10, default=5)
+    include_context: bool = True
+
+
+class VisionStorageConfig(BaseModel):
+    """Configuration for storing extracted images."""
+
+    output_dir: Path = Path("./data/images")
+    format: str = "png"
+
+
+class VisionConfig(BaseModel):
+    """Configuration for vision (image extraction and analysis)."""
+
+    enabled: bool = False
+    extraction: VisionExtractionConfig = Field(default_factory=VisionExtractionConfig)
+    analysis: VisionAnalysisConfig | None = None
+    storage: VisionStorageConfig = Field(default_factory=VisionStorageConfig)
+
+
 class Config(BaseModel):
     """Main configuration container."""
 
@@ -63,6 +100,7 @@ class Config(BaseModel):
     model: ModelConfig = Field(default_factory=ModelConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)
     runtime: RuntimeConfig = Field(default_factory=RuntimeConfig)
+    vision: VisionConfig = Field(default_factory=VisionConfig)
 
     @classmethod
     def from_yaml(cls, path: Path | str) -> "Config":
