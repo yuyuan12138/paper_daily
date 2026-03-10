@@ -39,8 +39,16 @@ class PaperSummarizer:
             # Call LLM
             response_text = await self._call_llm(prompt)
 
-            # Parse response
-            summary = json.loads(response_text)
+            # Parse response - try to extract JSON if wrapped in markdown
+            json_text = response_text.strip()
+            if json_text.startswith("```"):
+                # Remove markdown code block markers
+                json_text = json_text.split("```")[1]
+                if json_text.startswith("json"):
+                    json_text = json_text[4:]
+                json_text = json_text.strip()
+
+            summary = json.loads(json_text)
             paper.summary = summary
             paper.status = PaperStatus.summarized
             return paper
