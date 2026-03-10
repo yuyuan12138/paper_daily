@@ -1,13 +1,29 @@
 """Image extraction module for extracting images from PDF papers."""
 
+import asyncio
 import hashlib
+import logging
 from pathlib import Path
-from typing import Any
 
 import fitz  # PyMuPDF
 from PIL import Image
 
 from models import Paper, PaperStatus, ImageMetadata
+
+logger = logging.getLogger(__name__)
+
+
+def _sanitize_arxiv_id(arxiv_id: str) -> str:
+    """Sanitize arxiv_id to prevent path traversal attacks.
+
+    Args:
+        arxiv_id: The arxiv ID to sanitize.
+
+    Returns:
+        Sanitized arxiv ID with only allowed characters.
+    """
+    # Only allow alphanumeric characters, dots, and dashes
+    return "".join(c for c in arxiv_id if c.isalnum() or c in ".-")
 
 
 class ImageExtractor:
@@ -91,14 +107,32 @@ class ImageExtractor:
             return paper
 
         try:
+            # Run the blocking extraction in a thread pool
+            return await asyncio.to_thread(self._extract_sync, paper)
+        except Exception:
+            logger.exception("Failed to extract images from paper %s", paper.arxiv_id)
+            paper.status = PaperStatus.failed
+            return paper
+
+    def _extract_sync(self, paper: Paper) -> Paper:
+        """Synchronous image extraction (runs in thread pool).
+
+        Args:
+            paper: The paper to extract images from.
+
+        Returns:
+            The paper with extracted images metadata.
+        """
+        try:
             # Reset seen hashes for this paper
             self._seen_hashes.clear()
 
             # Open PDF
             doc = fitz.open(str(paper.pdf_path))
 
-            # Create output directory for this paper
-            paper_output_dir = self.output_dir / paper.arxiv_id
+            # Create output directory for this paper - sanitize arxiv_id to prevent path traversal
+            safe_arxiv_id = _sanitize_arxiv_id(paper.arxiv_id)
+            paper_output_dir = self.output_dir / safe_arxiv_id
             paper_output_dir.mkdir(parents=True, exist_ok=True)
 
             extracted_count = 0
@@ -171,8 +205,15 @@ class ImageExtractor:
                         paper.images.append(metadata)
                         extracted_count += 1
 
-                    except Exception:
-                        # Skip individual image extraction errors
+                    except Exception as e:
+                        # Log individual image extraction errors and skip
+                        logger.warning(
+                            "Failed to extract image %d from page %d of paper %s: %s",
+                            img_idx,
+                            page.number,
+                            paper.arxiv_id,
+                            e,
+                        )
                         continue
 
                 if extracted_count >= self.max_images_per_paper:
@@ -189,6 +230,19 @@ class ImageExtractor:
 
             return paper
 
+        except FileNotFoundError as e:
+            logger.error("PDF file not found for paper %s: %s", paper.arxiv_id, e)
+            paper.status = PaperStatus.failed
+            return paper
+        except PermissionError as e:
+            logger.error("Permission denied accessing PDF for paper %s: %s", paper.arxiv_id, e)
+            paper.status = PaperStatus.failed
+            return paper
+        except OSError as e:
+            logger.error("OS error processing PDF for paper %s: %s", paper.arxiv_id, e)
+            paper.status = PaperStatus.failed
+            return paper
         except Exception:
+            logger.exception("Unexpected error extracting images from paper %s", paper.arxiv_id)
             paper.status = PaperStatus.failed
             return paper
