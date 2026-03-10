@@ -6,8 +6,10 @@ Automated paper retrieval, analysis, and summarization system.
 
 - Fetch papers from arXiv by keywords and categories
 - Download PDFs automatically
-- Extract text content
-- Generate AI-powered summaries using Deepseek
+- Extract text content from PDFs
+- **Extract images from papers with captions**
+- **Analyze images using multimodal AI**
+- Generate AI-powered summaries using DeepSeek (or OpenAI/Anthropic)
 - Output structured Markdown documents
 - Track processing state to avoid duplicates
 
@@ -17,7 +19,7 @@ Automated paper retrieval, analysis, and summarization system.
 # Install dependencies
 uv pip install -e .
 
-# Set Deepseek API key
+# Set DeepSeek API key
 export DEEPSEEK_API_KEY="your-api-key"
 ```
 
@@ -27,17 +29,40 @@ Edit `config/config.yaml` to customize:
 
 ```yaml
 query:
-  keywords: ["your keywords here"]
+  keywords: ["large language model"]
   max_results: 10
 
 pipeline:
   language: zh  # or en
   summary_level: standard
 
+# Image extraction and analysis (optional)
+vision:
+  enabled: true
+  extraction:
+    min_size: [100, 100]
+    max_aspect_ratio: 5.0
+    max_images_per_paper: 15
+  # For image analysis, use OpenAI or Anthropic:
+  # analysis:
+  #   provider: openai
+  #   model_name: gpt-4o-mini
+  #   api_key_env: OPENAI_API_KEY
+
 model:
   provider: deepseek
   api_key_env: DEEPSEEK_API_KEY
 ```
+
+### Vision/Image Configuration
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `vision.enabled` | Enable image extraction | `false` |
+| `vision.extraction.min_size` | Minimum image size (width, height) | `(100, 100)` |
+| `vision.extraction.max_aspect_ratio` | Skip very wide/tall images | `5.0` |
+| `vision.extraction.max_images_per_paper` | Maximum images to extract | `15` |
+| `vision.analysis` | Image analysis config (optional) | `null` |
 
 ## Usage
 
@@ -52,9 +77,47 @@ paper-daily --config config.yaml --dry-run
 paper-daily --config config.yaml --max-papers 5
 ```
 
+### With Image Extraction
+
+```bash
+# Extract images and include in summary
+paper-daily --config config/test_vision.yaml
+```
+
 ## Output
 
-- `data/pdfs/` - Downloaded PDF files
-- `data/summaries/` - Generated Markdown summaries
-- `state/paper_state.json` - Processing state
-- `logs/pipeline.log` - Run logs
+```
+data/
+├── pdfs/           # Downloaded PDF files
+├── summaries/      # Generated Markdown summaries
+└── images/        # Extracted images (when vision enabled)
+    └── {arxiv_id}/
+        ├── figure_1_0.png
+        └── figure_3_1.png
+```
+
+### Summary Format
+
+The generated Markdown includes:
+
+- **Metadata**: arXiv ID, authors, date, categories
+- **Abstract**: Original paper abstract
+- **Summary** (AI-generated):
+  - Research Problem
+  - Core Method
+  - Contributions
+  - Experiments
+  - Limitations
+  - Keywords
+  - Applicable Scenarios
+  - **Figures** (if image extraction enabled)
+
+## Requirements
+
+- Python 3.13+
+- uv (package manager)
+- API key for LLM provider (DeepSeek, OpenAI, or Anthropic)
+
+## License
+
+MIT
