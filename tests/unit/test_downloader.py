@@ -24,16 +24,22 @@ async def test_download_pdf_success(tmp_path):
         pdf_url="https://arxiv.org/pdf/2401.12345.pdf",
     )
 
-    # Mock httpx async stream
+    # Create a mock response object
     mock_response = MagicMock()
     mock_response.status_code = 200
+    mock_response.aread = AsyncMock(return_value=b"fake pdf content")
+    mock_response.raise_for_status = MagicMock()
 
-    with patch("src.downloader.httpx.AsyncClient") as mock_client:
-        mock_stream = MagicMock()
-        mock_stream.status_code = 200
-        mock_stream.aread.return_value = b"fake pdf content"
+    # Create the async context manager mock
+    mock_stream_context = AsyncMock()
+    mock_stream_context.__aenter__.return_value = mock_response
 
-        mock_client.return_value.__aenter__.return_value.stream.return_value.__aenter__.return_value = mock_stream
+    # Mock the stream method to return the context manager
+    mock_client_instance = MagicMock()
+    mock_client_instance.stream = MagicMock(return_value=mock_stream_context)
+
+    with patch("downloader.httpx.AsyncClient") as mock_client:
+        mock_client.return_value.__aenter__.return_value = mock_client_instance
 
         result = await downloader.download(paper)
 
@@ -73,9 +79,9 @@ async def test_download_skip_if_exists(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_download_with_retry_on_timeout():
+async def test_download_with_retry_on_timeout(tmp_path):
     """Test retry behavior on timeout."""
-    downloader = PDFDownloader(retry_times=2, base_dir=Path("/tmp"))
+    downloader = PDFDownloader(retry_times=2, base_dir=tmp_path)
 
     paper = Paper(
         arxiv_id="2401.12345",
@@ -87,16 +93,28 @@ async def test_download_with_retry_on_timeout():
         pdf_url="https://arxiv.org/pdf/2401.12345.pdf",
     )
 
-    with patch("src.downloader.httpx.AsyncClient") as mock_client:
-        # First call times out, second succeeds
-        mock_stream = MagicMock()
-        mock_stream.status_code = 200
-        mock_stream.aread.return_value = b"pdf content"
+    call_count = [0]
 
-        mock_client.return_value.__aenter__.return_value.stream.side_effect = [
-            TimeoutException("Timeout"),
-            mock_stream,
-        ]
+    def stream_side_effect(*args, **kwargs):
+        call_count[0] += 1
+        if call_count[0] == 1:
+            # First call raises timeout
+            raise TimeoutException("Timeout")
+        # Second call succeeds
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.aread = AsyncMock(return_value=b"pdf content")
+        mock_response.raise_for_status = MagicMock()
+
+        mock_stream_context = AsyncMock()
+        mock_stream_context.__aenter__.return_value = mock_response
+        return mock_stream_context
+
+    mock_client_instance = MagicMock()
+    mock_client_instance.stream = stream_side_effect
+
+    with patch("downloader.httpx.AsyncClient") as mock_client:
+        mock_client.return_value.__aenter__.return_value = mock_client_instance
 
         result = await downloader.download(paper)
 
@@ -104,9 +122,9 @@ async def test_download_with_retry_on_timeout():
 
 
 @pytest.mark.asyncio
-async def test_download_failure_after_retries():
+async def test_download_failure_after_retries(tmp_path):
     """Test marking as failed after max retries."""
-    downloader = PDFDownloader(retry_times=1, base_dir=Path("/tmp"))
+    downloader = PDFDownloader(retry_times=1, base_dir=tmp_path)
 
     paper = Paper(
         arxiv_id="2401.12345",
@@ -118,8 +136,14 @@ async def test_download_failure_after_retries():
         pdf_url="https://arxiv.org/pdf/2401.12345.pdf",
     )
 
-    with patch("src.downloader.httpx.AsyncClient") as mock_client:
-        mock_client.return_value.__aenter__.return_value.stream.side_effect = TimeoutException("Timeout")
+    def stream_side_effect(*args, **kwargs):
+        raise TimeoutException("Timeout")
+
+    mock_client_instance = MagicMock()
+    mock_client_instance.stream = stream_side_effect
+
+    with patch("downloader.httpx.AsyncClient") as mock_client:
+        mock_client.return_value.__aenter__.return_value = mock_client_instance
 
         result = await downloader.download(paper)
 
@@ -127,9 +151,9 @@ async def test_download_failure_after_retries():
 
 
 @pytest.mark.asyncio
-async def test_download_404_not_found():
+async def test_download_404_not_found(tmp_path):
     """Test handling 404 error without retry."""
-    downloader = PDFDownloader(retry_times=3, base_dir=Path("/tmp"))
+    downloader = PDFDownloader(retry_times=3, base_dir=tmp_path)
 
     paper = Paper(
         arxiv_id="2401.12345",
@@ -141,14 +165,27 @@ async def test_download_404_not_found():
         pdf_url="https://arxiv.org/pdf/2401.12345.pdf",
     )
 
-    with patch("src.downloader.httpx.AsyncClient") as mock_client:
-        response = MagicMock()
-        response.status_code = 404
+    response = MagicMock()
+    response.status_code = 404
 
-        mock_client.return_value.__aenter__.return_value.stream.return_value.__aenter__.return_value = response
-        mock_client.return_value.__aenter__.return_value.stream.return_value.__aenter__.raise_for_status.side_effect = HTTPStatusError(
-            "Not found", request=MagicMock(), response=response
-        )
+    def stream_side_effect(*args, **kwargs):
+        mock_response = MagicMock()
+        mock_response.status_code = 404
+
+        def raise_for_status():
+            raise HTTPStatusError("Not found", request=MagicMock(), response=response)
+
+        mock_response.raise_for_status = raise_for_status
+
+        mock_stream_context = AsyncMock()
+        mock_stream_context.__aenter__.return_value = mock_response
+        return mock_stream_context
+
+    mock_client_instance = MagicMock()
+    mock_client_instance.stream = stream_side_effect
+
+    with patch("downloader.httpx.AsyncClient") as mock_client:
+        mock_client.return_value.__aenter__.return_value = mock_client_instance
 
         result = await downloader.download(paper)
 
