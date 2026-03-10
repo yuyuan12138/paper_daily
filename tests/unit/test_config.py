@@ -3,7 +3,7 @@
 from pathlib import Path
 from pydantic import ValidationError
 import pytest
-from src.config import Config, QueryConfig, PipelineConfig, ModelConfig, OutputConfig, RuntimeConfig
+from config import Config, QueryConfig, PipelineConfig, ModelConfig, OutputConfig, RuntimeConfig
 
 
 def test_query_config_validation():
