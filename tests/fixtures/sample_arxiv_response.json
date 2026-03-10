@@ -1,0 +1,22 @@
+{
+  "entries": [
+    {
+      "id": "http://arxiv.org/abs/2401.12345",
+      "title": "Attention Is All You Need",
+      "summary": "We propose a new simple network architecture, the Transformer...",
+      "published": "2024-01-01T12:00:00Z",
+      "categories": ["cs.AI", "cs.LG"],
+      "authors": [
+        {"name": "Vaswani, Ashish"},
+        {"name": "Shazeer, Noam"}
+      ],
+      "links": [
+        {
+          "href": "http://arxiv.org/pdf/2401.12345v1.pdf",
+          "title": "pdf",
+          "type": "application/pdf"
+        }
+      ]
+    }
+  ]
+}
