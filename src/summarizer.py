@@ -7,7 +7,7 @@ from pathlib import Path
 from openai import AsyncOpenAI
 
 from config import ModelConfig
-from models import Paper, PaperStatus
+from models import ImageMetadata, Paper, PaperStatus
 
 
 class PaperSummarizer:
@@ -49,7 +49,7 @@ class PaperSummarizer:
             paper.status = PaperStatus.failed
             return paper
 
-    def _create_prompt_with_images_context(self, images: list) -> str:
+    def _create_prompt_with_images_context(self, images: list[ImageMetadata]) -> str:
         """Create image context string for prompts.
 
         Args:
