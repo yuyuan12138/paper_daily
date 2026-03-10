@@ -4,14 +4,16 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from config import Config
-from models import PaperStatus
-from state_manager import StateManager
-from fetcher import ArXivFetcher
-from downloader import PDFDownloader
-from parser import PDFParser
-from summarizer import PaperSummarizer
-from renderer import MarkdownRenderer
+from src.config import Config
+from src.models import PaperStatus
+from src.state_manager import StateManager
+from src.fetcher import ArXivFetcher
+from src.downloader import PDFDownloader
+from src.parser import PDFParser
+from src.summarizer import PaperSummarizer
+from src.renderer import MarkdownRenderer
+from src.image_extractor import ImageExtractor
+from src.image_analyzer import ImageAnalyzer
 
 logging.basicConfig(
     level=logging.INFO,
@@ -45,6 +47,27 @@ class PipelineRunner:
         self.renderer = MarkdownRenderer(
             output_dir=config.output.base_dir / "summaries"
         )
+
+        # Initialize image modules if enabled
+        if config.vision.enabled:
+            self.image_extractor = ImageExtractor(
+                min_size=config.vision.extraction.min_size,
+                max_aspect_ratio=config.vision.extraction.max_aspect_ratio,
+                max_images_per_paper=config.vision.extraction.max_images_per_paper,
+                skip_duplicates=config.vision.extraction.skip_duplicates,
+                output_dir=config.vision.storage.output_dir,
+            )
+            self.image_analyzer = ImageAnalyzer(
+                provider=config.vision.analysis.provider,
+                model_name=config.vision.analysis.model_name,
+                api_key_env=config.vision.analysis.api_key_env,
+                base_url=config.vision.analysis.base_url,
+                max_tokens=config.vision.analysis.max_tokens,
+                batch_size=config.vision.analysis.batch_size,
+            )
+        else:
+            self.image_extractor = None
+            self.image_analyzer = None
 
     async def run(self) -> dict:
         """Execute the pipeline."""
@@ -95,6 +118,19 @@ class PipelineRunner:
                     if paper.status == PaperStatus.failed:
                         failed.append(paper.arxiv_id)
                         continue
+
+                # Extract and analyze images
+                if self.config.vision.enabled and self.config.pipeline.parse_pdf:
+                    try:
+                        paper = await self.image_extractor.extract(paper)
+                        self.state.update_paper_status(paper.arxiv_id, paper.status)
+
+                        if paper.images and self.config.vision.analysis:
+                            paper = await self.image_analyzer.analyze(paper)
+                            self.state.update_paper_status(paper.arxiv_id, paper.status)
+                    except Exception as e:
+                        logger.warning(f"Image processing failed for {paper.arxiv_id}: {e}")
+                        # Continue with text-only summary
 
                 # Summarize
                 if self.config.pipeline.summarize:
