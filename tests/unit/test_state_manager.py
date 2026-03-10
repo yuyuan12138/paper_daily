@@ -2,8 +2,8 @@ from datetime import datetime
 from pathlib import Path
 import pytest
 import json
-from src.models import Paper, PaperStatus
-from src.state_manager import StateManager
+from models import Paper, PaperStatus
+from state_manager import StateManager
 
 
 def test_state_manager_init(tmp_path):

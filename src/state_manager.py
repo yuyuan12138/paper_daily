@@ -3,7 +3,7 @@
 from datetime import datetime
 from pathlib import Path
 import json
-from src.models import PaperStatus
+from models import PaperStatus
 
 
 class StateManager:
