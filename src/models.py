@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 
 class PaperStatus(Enum):
@@ -38,6 +38,7 @@ class ImageMetadata:
     caption: str | None = None
     analysis: ImageAnalysis | None = None
     image_type: str = "unknown"
+    fig_type: Literal["Figure", "Table", None] = None
 
 
 @dataclass
