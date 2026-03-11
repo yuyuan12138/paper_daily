@@ -12,6 +12,14 @@ pipeline:
   output_markdown: true
   language: zh
   summary_level: standard
+  # Multi-step analysis (optional) - enable for detailed multi-step analysis
+  multi_step_enabled: true  # Set to true to enable multi-step analysis
+  # Available steps: screening, quick, deep, experiments, reproducibility, inspiration
+  multi_step_steps:
+    - screening
+    - quick
+    - deep
+    - experiments
 
 vision:
   enabled: true
@@ -27,7 +35,7 @@ vision:
   # PDFFigures2 extractor options (when extractor: pdffigures2)
   # REQUIRED: Update this path to your compiled pdffigures2 JAR file
   # Compile with: cd pdffigures2 && sbt assembly
-  pdffigures2_jar: "/path/to/pdffigures2/target/scala-2.13/pdffigures2-assembly-*.jar"
+  pdffigures2_jar: "/home/yuyuan/paper_daily/pdffigures2/pdffigures2.jar"
   pdffigures2_dpi: 150
   pdffigures2_extract_figures: true
   pdffigures2_extract_tables: true
@@ -40,6 +48,17 @@ vision:
     output_dir: ./data/images
     format: png
 
+  # Image analysis using multimodal LLM (siliconflow)
+  analysis:
+    enabled: false  # Set to true to enable image analysis (⚠️ in development, may produce inconsistent results)
+    provider: "openai-compatible"
+    model_name: "Qwen/Qwen3-VL-30B-A3B-Instruct"
+    api_key_env: "SILICONFLOW_API_KEY"
+    base_url: "https://api.siliconflow.cn/v1"
+    max_tokens: 2000
+    batch_size: 5
+    max_concurrency: 5  # Max concurrent API calls for image analysis
+
 model:
   provider: deepseek
   base_url: "https://api.deepseek.com/v1"
@@ -47,6 +66,7 @@ model:
   api_key_env: DEEPSEEK_API_KEY
   temperature: 0.2
   max_tokens: 4000
+  max_concurrency: 5  # Max concurrent API calls for summarization
 
 output:
   base_dir: ./data

@@ -1,5 +1,6 @@
 """Image analysis module using multimodal LLMs."""
 
+import asyncio
 import base64
 import json
 import logging
@@ -18,22 +19,24 @@ class ImageAnalyzer:
 
     def __init__(
         self,
-        provider: str = "openai",
-        model_name: str = "gpt-4o",
-        api_key_env: str = "OPENAI_API_KEY",
-        base_url: str | None = None,
-        max_tokens: int = 1000,
+        provider: str = "openai-compatible",
+        model_name: str = "Qwen/Qwen2-VL-7B-Instruct",
+        api_key_env: str = "SILICONFLOW_API_KEY",
+        base_url: str | None = "https://api.siliconflow.cn/v1",
+        max_tokens: int = 2000,
         batch_size: int = 5,
+        max_concurrency: int = 5,
     ) -> None:
         """Initialize the image analyzer.
 
         Args:
-            provider: LLM provider - "openai" or "anthropic"
+            provider: LLM provider - "openai", "anthropic", or "openai-compatible"
             model_name: Model to use for analysis
             api_key_env: Environment variable name for API key
             base_url: Optional base URL for API (for compatible providers)
             max_tokens: Maximum tokens in response
             batch_size: Number of images to process in each batch
+            max_concurrency: Maximum number of concurrent API calls
         """
         self.provider = provider
         self.model_name = model_name
@@ -41,6 +44,7 @@ class ImageAnalyzer:
         self.base_url = base_url
         self.max_tokens = max_tokens
         self.batch_size = batch_size
+        self.max_concurrency = max_concurrency
 
     async def analyze(self, paper: Paper) -> Paper:
         """Analyze all images in a paper.
@@ -57,15 +61,36 @@ class ImageAnalyzer:
             return paper
 
         try:
-            # Track if any image was successfully analyzed
-            any_success = False
+            # Use semaphore to limit concurrency
+            semaphore = asyncio.Semaphore(self.max_concurrency)
 
-            # Process images in batches
-            for i in range(0, len(paper.images), self.batch_size):
-                batch = paper.images[i : i + self.batch_size]
-                success = await self._analyze_batch(paper, batch)
-                if success:
-                    any_success = True
+            async def analyze_with_semaphore(img: ImageMetadata) -> ImageMetadata:
+                """Analyze single image with semaphore."""
+                async with semaphore:
+                    try:
+                        analysis = await self._analyze_single_image(paper, img)
+                        img.analysis = analysis
+                        return img
+                    except Exception as e:
+                        logger.warning(
+                            "Failed to analyze image %s for paper %s: %s",
+                            img.path,
+                            paper.arxiv_id,
+                            e,
+                        )
+                        return img
+
+            # Process all images concurrently with limited concurrency
+            results = await asyncio.gather(
+                *[analyze_with_semaphore(img) for img in paper.images],
+                return_exceptions=True,
+            )
+
+            # Check if any image was successfully analyzed
+            any_success = any(
+                isinstance(r, ImageMetadata) and r.analysis is not None
+                for r in results
+            )
 
             # If at least one image was analyzed successfully, mark as analyzed
             if any_success:
@@ -123,7 +148,7 @@ class ImageAnalyzer:
         image_base64 = self._read_image_as_base64(img.path)
 
         # Call appropriate LLM based on provider
-        if self.provider == "openai":
+        if self.provider == "openai" or self.provider == "openai-compatible":
             return await self._analyze_with_openai(paper, img, image_base64)
         elif self.provider == "anthropic":
             return await self._analyze_with_anthropic(paper, img, image_base64)

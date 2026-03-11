@@ -43,6 +43,8 @@ class PipelineRunner:
             model_config=config.model,
             language=config.pipeline.language,
             summary_level=config.pipeline.summary_level,
+            multi_step_enabled=config.pipeline.multi_step_enabled,
+            multi_step_steps=config.pipeline.multi_step_steps,
         )
         self.renderer = MarkdownRenderer(
             output_dir=config.output.base_dir / "summaries"
@@ -54,8 +56,8 @@ class PipelineRunner:
                 config.vision,
                 output_dir=config.vision.storage.output_dir,
             )
-            # Only initialize analyzer if analysis config is provided
-            if config.vision.analysis:
+            # Only initialize analyzer if analysis config is provided and enabled
+            if config.vision.analysis and config.vision.analysis.enabled:
                 self.image_analyzer = ImageAnalyzer(
                     provider=config.vision.analysis.provider,
                     model_name=config.vision.analysis.model_name,
@@ -63,6 +65,7 @@ class PipelineRunner:
                     base_url=config.vision.analysis.base_url,
                     max_tokens=config.vision.analysis.max_tokens,
                     batch_size=config.vision.analysis.batch_size,
+                    max_concurrency=config.vision.analysis.max_concurrency,
                 )
             else:
                 self.image_analyzer = None
@@ -126,7 +129,7 @@ class PipelineRunner:
                         paper = await self.image_extractor.extract(paper)
                         self.state.update_paper_status(paper.arxiv_id, paper.status)
 
-                        if paper.images and self.config.vision.analysis:
+                        if paper.images and self.config.vision.analysis and self.config.vision.analysis.enabled:
                             paper = await self.image_analyzer.analyze(paper)
                             self.state.update_paper_status(paper.arxiv_id, paper.status)
                     except Exception as e:
@@ -153,7 +156,7 @@ class PipelineRunner:
                 logger.info(f"Successfully processed {paper.arxiv_id}")
 
             except Exception as e:
-                logger.error(f"Error processing {paper.arxiv_id}: {e}")
+                logger.exception(f"Error processing {paper.arxiv_id}: {e}")
                 self.state.update_paper_status(paper.arxiv_id, PaperStatus.failed, error=str(e))
                 if not self.config.runtime.continue_on_error:
                     raise

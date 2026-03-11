@@ -26,6 +26,9 @@ class PipelineConfig(BaseModel):
     output_markdown: bool = True
     language: Literal["en", "zh"] = "zh"
     summary_level: Literal["brief", "standard", "detailed"] = "standard"
+    # Multi-step summarization options
+    multi_step_enabled: bool = False  # Enable multi-step analysis
+    multi_step_steps: list[str] = Field(default_factory=lambda: ["screening", "quick", "deep", "experiments"])
 
 
 class ModelConfig(BaseModel):
@@ -37,6 +40,7 @@ class ModelConfig(BaseModel):
     api_key_env: str = "DEEPSEEK_API_KEY"
     temperature: float = Field(ge=0, le=2, default=0.2)
     max_tokens: int = Field(gt=0, default=4000)
+    max_concurrency: int = Field(gt=0, le=20, default=5)  # New: max concurrent API calls
 
 
 class OutputConfig(BaseModel):
@@ -67,12 +71,14 @@ class VisionExtractionConfig(BaseModel):
 class VisionAnalysisConfig(BaseModel):
     """Configuration for image analysis using LLMs."""
 
-    provider: str = Field(pattern="^(openai|anthropic)$", default="openai")
-    model_name: str = "gpt-4o"
-    api_key_env: str = "OPENAI_API_KEY"
-    base_url: str | None = None
-    max_tokens: int = Field(gt=0, le=4000, default=1000)
+    enabled: bool = False  # New: control whether to enable image analysis
+    provider: Literal["openai", "anthropic", "openai-compatible"] = "openai-compatible"
+    model_name: str = "Qwen/Qwen2-VL-7B-Instruct"
+    api_key_env: str = "SILICONFLOW_API_KEY"
+    base_url: str | None = "https://api.siliconflow.cn/v1"
+    max_tokens: int = Field(gt=0, le=8000, default=2000)
     batch_size: int = Field(gt=0, le=10, default=5)
+    max_concurrency: int = Field(gt=0, le=20, default=5)  # New: max concurrent API calls
     include_context: bool = True
 
 

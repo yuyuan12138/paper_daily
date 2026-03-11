@@ -96,56 +96,69 @@ class PDFFigures2Extractor:
             paper.status = PaperStatus.failed
             return paper
 
+        import shutil
+        temp_dir = tempfile.mkdtemp(prefix="pdffigures_")
+        temp_path = Path(temp_dir)
+
         try:
             # Create output directory for this paper
             paper_output_dir = self.output_dir / _sanitize_arxiv_id(paper.arxiv_id)
             paper_output_dir.mkdir(parents=True, exist_ok=True)
 
-            # Create temporary directory for pdffigures2 output
-            with tempfile.TemporaryDirectory() as temp_dir:
-                temp_path = Path(temp_dir)
+            # Build command
+            cmd = self._build_command(paper.pdf_path, temp_path)
 
-                # Build command
-                cmd = self._build_command(paper.pdf_path, temp_path)
+            # Run pdffigures2
+            logger.info("Running pdffigures2 for paper %s", paper.arxiv_id)
+            logger.info("Command: %s", " ".join(cmd))
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=120,  # 2 minute timeout
+            )
 
-                # Run pdffigures2
-                logger.info("Running pdffigures2 for paper %s", paper.arxiv_id)
-                result = subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    timeout=120,  # 2 minute timeout
+            logger.info("Return code: %s", result.returncode)
+            if result.stdout:
+                logger.info("stdout: %s", result.stdout[:500])
+            if result.stderr:
+                logger.info("stderr: %s", result.stderr[:500])
+
+            if result.returncode != 0:
+                logger.error(
+                    "pdffigures2 failed for paper %s: %s",
+                    paper.arxiv_id,
+                    result.stderr[-1000:] if result.stderr else "No stderr",
                 )
+                paper.status = PaperStatus.failed
+                return paper
 
-                if result.returncode != 0:
-                    logger.error(
-                        "pdffigures2 failed for paper %s: %s",
-                        paper.arxiv_id,
-                        result.stderr,
-                    )
-                    paper.status = PaperStatus.failed
-                    return paper
+            # Find JSON output file
+            json_file = self._find_json_output(temp_path)
+            logger.info("JSON file: %s", json_file)
+            if not json_file:
+                logger.warning("No JSON output found for paper %s", paper.arxiv_id)
+                # Log files in temp directory for debugging
+                logger.info("Temp directory contents: %s", list(temp_path.iterdir()))
+                paper.status = PaperStatus.images_extracted
+                return paper
 
-                # Find JSON output file
-                json_file = self._find_json_output(temp_path)
-                if not json_file:
-                    logger.warning("No JSON output found for paper %s", paper.arxiv_id)
-                    paper.status = PaperStatus.images_extracted
-                    return paper
+            # Parse JSON output
+            with open(json_file, "r") as f:
+                data = json.load(f)
 
-                # Parse JSON output
-                with open(json_file, "r") as f:
-                    data = json.load(f)
+            logger.info("JSON data type: %s", type(data))
+            logger.info("Number of figures in JSON: %s", len(data) if isinstance(data, list) else "N/A")
 
-                # Process each figure
-                # pdffigures2 JSON is a list directly, not a dict with "figures" key
-                figures = data if isinstance(data, list) else data.get("figures", [])
-                for fig_data in figures[:self.max_figures]:
-                    metadata = self._process_figure(
-                        fig_data, paper_output_dir, paper.arxiv_id, temp_path
-                    )
-                    if metadata:
-                        paper.images.append(metadata)
+            # Process each figure
+            # pdffigures2 JSON is a list directly, not a dict with "figures" key
+            figures = data if isinstance(data, list) else data.get("figures", [])
+            for fig_data in figures[:self.max_figures]:
+                metadata = self._process_figure(
+                    fig_data, paper_output_dir, paper.arxiv_id, temp_path
+                )
+                if metadata:
+                    paper.images.append(metadata)
 
             # Update paper status
             if len(paper.images) > 0:
@@ -164,9 +177,12 @@ class PDFFigures2Extractor:
             logger.exception("Failed to extract figures from paper %s", paper.arxiv_id)
             paper.status = PaperStatus.failed
             return paper
+        finally:
+            # Clean up temporary directory
+            shutil.rmtree(temp_path, ignore_errors=True)
 
     def _build_command(self, pdf_path: Path, temp_dir: Path) -> list[str]:
-        """Build the command to run pdffigures2.
+        """Build the command to run pdffigures2 batch CLI.
 
         Args:
             pdf_path: Path to the PDF file.
@@ -175,26 +191,22 @@ class PDFFigures2Extractor:
         Returns:
             List of command arguments.
         """
-        cmd = []
+        cmd = ["java"]
 
-        # Add Java options if provided
+        # Add Java options if provided (must come after 'java')
         if self.java_options:
             cmd.extend(self.java_options)
 
-        # Build base command
-        # Note: pdffigures2 CLI flags:
-        # -i <value> : DPI to save figures (default 150)
-        # -d <value> : figure-data-prefix for JSON output
-        # -m <value> : figure-prefix for image output
-        # -f <value> : figure format (default png)
+        # Build batch CLI command
+        # Format: java -cp <jar> org.allenai.pdffigures2.FigureExtractorBatchCli <pdf> -s <stats> -m <img_prefix> -d <data_prefix>
         cmd.extend([
-            "java",
-            "-jar",
+            "-cp",
             str(self.jar_path),
+            "org.allenai.pdffigures2.FigureExtractorBatchCli",
             str(pdf_path),
-            "-i", str(self.dpi),
-            "-d", str(temp_dir / "data_output"),
+            "-s", str(temp_dir / "stats.json"),
             "-m", str(temp_dir / "figures_output"),
+            "-d", str(temp_dir / "data_output"),
         ])
 
         return cmd
@@ -208,10 +220,19 @@ class PDFFigures2Extractor:
         Returns:
             Path to the JSON file, or None if not found.
         """
-        # Look for JSON files in temp directory
-        json_files = list(temp_dir.glob("*.json"))
+        # pdffigures2 creates figure data JSON file with pattern: data_output{pdf_name}.json
+        # This file is placed directly in temp_dir (NOT in a data_output subdirectory)
+        json_files = list(temp_dir.glob("data_output*.json"))
         if json_files:
             return json_files[0]
+
+        # Fallback: try data_output subdirectory (older versions)
+        data_dir = temp_dir / "data_output"
+        if data_dir.exists():
+            json_files = list(data_dir.glob("*.json"))
+            if json_files:
+                return json_files[0]
+
         return None
 
     def _process_figure(
@@ -251,8 +272,13 @@ class PDFFigures2Extractor:
         # Check if renderURL is provided in JSON data
         render_url = fig_data.get("renderURL", "")
         if render_url:
-            # Use the renderURL to find the image file
-            original_image = temp_dir / render_url
+            # renderURL may be an absolute path or relative to temp_dir
+            render_path = Path(render_url)
+            if render_path.is_absolute():
+                original_image = render_path
+            else:
+                original_image = temp_dir / render_url
+
             if not original_image.exists():
                 logger.warning(
                     "Could not find image file from renderURL: %s",
