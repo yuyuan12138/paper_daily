@@ -13,6 +13,19 @@ from models import Paper, PaperStatus, ImageMetadata
 logger = logging.getLogger(__name__)
 
 
+def _sanitize_arxiv_id(arxiv_id: str) -> str:
+    """Sanitize arxiv_id to prevent path traversal attacks.
+
+    Args:
+        arxiv_id: The arxiv ID to sanitize.
+
+    Returns:
+        Sanitized arxiv ID with only allowed characters.
+    """
+    # Only allow alphanumeric characters, dots, and dashes
+    return "".join(c for c in arxiv_id if c.isalnum() or c in ".-")
+
+
 class PDFFigures2Extractor:
     """Extracts figures from PDF papers using pdffigures2 JAR."""
 
@@ -78,7 +91,7 @@ class PDFFigures2Extractor:
         """
         try:
             # Create output directory for this paper
-            paper_output_dir = self.output_dir / paper.arxiv_id
+            paper_output_dir = self.output_dir / _sanitize_arxiv_id(paper.arxiv_id)
             paper_output_dir.mkdir(parents=True, exist_ok=True)
 
             # Create temporary directory for pdffigures2 output
@@ -135,6 +148,10 @@ class PDFFigures2Extractor:
 
             return paper
 
+        except subprocess.TimeoutExpired:
+            logger.error("pdffigures2 timeout for paper %s", paper.arxiv_id)
+            paper.status = PaperStatus.failed
+            return paper
         except Exception:
             logger.exception("Failed to extract figures from paper %s", paper.arxiv_id)
             paper.status = PaperStatus.failed
