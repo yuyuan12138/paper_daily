@@ -90,6 +90,12 @@ class PDFFigures2Extractor:
         Returns:
             The paper with extracted figures metadata.
         """
+        # Check if JAR file exists
+        if not self.jar_path.exists():
+            logger.error("pdffigures2 JAR not found at: %s", self.jar_path)
+            paper.status = PaperStatus.failed
+            return paper
+
         try:
             # Create output directory for this paper
             paper_output_dir = self.output_dir / _sanitize_arxiv_id(paper.arxiv_id)

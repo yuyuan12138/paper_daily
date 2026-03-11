@@ -6,7 +6,8 @@ import tempfile
 import pytest
 
 from pdffigures_extractor import PDFFigures2Extractor
-from models import ImageMetadata
+from models import ImageMetadata, Paper, PaperStatus
+from datetime import datetime
 
 
 @pytest.fixture
@@ -160,3 +161,33 @@ class TestPDFFigures2Extractor:
             fig_data, output_dir, "test-paper", temp_dir
         )
         assert result is None
+
+    def test_extract_with_missing_jar(self, tmp_path):
+        """Test that extraction fails gracefully when JAR file doesn't exist."""
+        # Create extractor with nonexistent JAR path
+        nonexistent_jar = tmp_path / "nonexistent" / "pdffigures2.jar"
+        output_dir = tmp_path / "output"
+        extractor = PDFFigures2Extractor(
+            jar_path=nonexistent_jar,
+            output_dir=output_dir,
+        )
+
+        # Create a mock paper with a PDF path
+        pdf_path = tmp_path / "test.pdf"
+        pdf_path.write_bytes(b"fake pdf content")
+        paper = Paper(
+            arxiv_id="1234.5678",
+            title="Test Paper",
+            authors=["Test Author"],
+            abstract="Test abstract",
+            submitted_date=datetime.now(),
+            categories=["cs.AI"],
+            pdf_url="https://arxiv.org/pdf/1234.5678.pdf",
+            pdf_path=pdf_path,
+        )
+
+        # Call _extract_sync() on the paper
+        result = extractor._extract_sync(paper)
+
+        # Assert paper.status == PaperStatus.failed
+        assert result.status == PaperStatus.failed
