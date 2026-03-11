@@ -34,13 +34,29 @@ export SILICONFLOW_API_KEY="your-key"
 
 > 📚 Get your keys: [DeepSeek](https://platform.deepseek.com/) | [SiliconFlow](https://cloud.siliconflow.cn/)
 
-### 3. (Optional) Compile PDFFigures2
+### 3. (Optional) PDFFigures2 Setup
 
-Better image extraction with captions:
+Better image extraction with captions & table detection:
 
 ```bash
-cd pdffsbt assembly
-igures2
+# Install Java 11+ and sbt first
+# On macOS: brew install openjdk@11 sbt
+# On Ubuntu: apt install openjdk-11-jdk sbt
+
+# Build pdffigures2
+cd pdffigures2
+sbt assembly
+
+# This creates: target/scala-2.13/pdffigures2-assembly-*.jar
+```
+
+Then update `config.yaml`:
+
+```yaml
+vision:
+  enabled: true
+  extractor: pdffigures2
+  pdffigures2_jar: "./pdffigures2/target/scala-2.13/pdffigures2-assembly-*.jar"
 ```
 
 ## ⚙️ Configuration

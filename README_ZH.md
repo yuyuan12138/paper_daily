@@ -34,13 +34,29 @@ export SILICONFLOW_API_KEY="your-key"
 
 > 📚 获取密钥：[DeepSeek](https://platform.deepseek.com/) | [SiliconFlow](https://cloud.siliconflow.cn/)
 
-### 3.（可选）编译PDFFigures2
+### 3.（可选）PDFFigures2 安装
 
-更好的图片提取（带标题）：
+更好的图片提取（带标题和表格检测）：
 
 ```bash
+# 首先安装 Java 11+ 和 sbt
+# macOS: brew install openjdk@11 sbt
+# Ubuntu: apt install openjdk-11-jdk sbt
+
+# 编译 pdffigures2
 cd pdffigures2
 sbt assembly
+
+# 编译完成后生成: target/scala-2.13/pdffigures2-assembly-*.jar
+```
+
+然后更新 `config.yaml`：
+
+```yaml
+vision:
+  enabled: true
+  extractor: pdffigures2
+  pdffigures2_jar: "./pdffigures2/target/scala-2.13/pdffigures2-assembly-*.jar"
 ```
 
 ## ⚙️ 配置
