@@ -6,6 +6,7 @@ import tempfile
 import pytest
 
 from pdffigures_extractor import PDFFigures2Extractor
+from models import ImageMetadata
 
 
 @pytest.fixture
@@ -58,3 +59,104 @@ class TestPDFFigures2Extractor:
         assert extractor.extract_tables is True  # Default value
         assert extractor.max_figures == 20  # Default value
         assert extractor.java_options is None  # Default value
+
+    def test_process_figure_renames_image(self, extractor, tmp_path):
+        """Test that _process_figure renames and copies image correctly."""
+        # Create a temporary directory with a mock image file
+        temp_dir = tmp_path / "temp"
+        temp_dir.mkdir()
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+
+        # Create a mock image file with pdffigures2 naming convention
+        mock_image = temp_dir / "test-paper-Figure1-1.png"
+        mock_image.write_bytes(b"fake image data")
+
+        # Mock figure data from pdffigures2 JSON output
+        fig_data = {
+            "figType": "Figure",
+            "name": "1",
+            "caption": "Figure 1: A test figure with description",
+            "page": 0,  # 0-based page number
+        }
+
+        # Process the figure
+        result = extractor._process_figure(
+            fig_data, output_dir, "test-paper", temp_dir
+        )
+
+        # Verify the result
+        assert isinstance(result, ImageMetadata)
+        assert result.fig_type == "Figure"
+        assert result.figure_number == "1"
+        assert result.caption == "A test figure with description"  # Figure number prefix removed
+        assert result.page_number == 1  # Converted to 1-based
+        assert result.path == output_dir / "Figure1.png"
+        assert result.path.exists()
+        assert result.path.read_bytes() == b"fake image data"
+
+    def test_process_figure_filters_by_type(self, extractor, tmp_path):
+        """Test that _process_figure filters by extract_figures/extract_tables settings."""
+        temp_dir = tmp_path / "temp"
+        temp_dir.mkdir()
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+
+        # Create extractor that only extracts figures, not tables
+        figures_only_extractor = PDFFigures2Extractor(
+            jar_path=extractor.jar_path,
+            output_dir=output_dir,
+            extract_figures=True,
+            extract_tables=False,
+        )
+
+        # Test with a table - should be filtered out
+        table_data = {
+            "figType": "Table",
+            "name": "1",
+            "caption": "Table 1: Test table",
+            "page": 0,
+        }
+        mock_table_image = temp_dir / "test-paper-Table1-1.png"
+        mock_table_image.write_bytes(b"table data")
+
+        result = figures_only_extractor._process_figure(
+            table_data, output_dir, "test-paper", temp_dir
+        )
+        assert result is None  # Should be filtered out
+
+        # Test with a figure - should be processed
+        figure_data = {
+            "figType": "Figure",
+            "name": "1",
+            "caption": "Figure 1: Test figure",
+            "page": 0,
+        }
+        mock_figure_image = temp_dir / "test-paper-Figure1-1.png"
+        mock_figure_image.write_bytes(b"figure data")
+
+        result = figures_only_extractor._process_figure(
+            figure_data, output_dir, "test-paper", temp_dir
+        )
+        assert isinstance(result, ImageMetadata)
+        assert result.fig_type == "Figure"
+
+    def test_process_figure_handles_missing_image(self, extractor, tmp_path):
+        """Test that _process_figure returns None when image file is missing."""
+        temp_dir = tmp_path / "temp"
+        temp_dir.mkdir()
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+
+        # Mock figure data but don't create the image file
+        fig_data = {
+            "figType": "Figure",
+            "name": "1",
+            "caption": "Figure 1: Test",
+            "page": 0,
+        }
+
+        result = extractor._process_figure(
+            fig_data, output_dir, "test-paper", temp_dir
+        )
+        assert result is None

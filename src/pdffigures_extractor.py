@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import re
 import subprocess
 import tempfile
 from pathlib import Path
@@ -134,7 +135,7 @@ class PDFFigures2Extractor:
                 figures = data.get("figures", [])
                 for fig_data in figures[:self.max_figures]:
                     metadata = self._process_figure(
-                        fig_data, paper_output_dir, paper.arxiv_id
+                        fig_data, paper_output_dir, paper.arxiv_id, temp_path
                     )
                     if metadata:
                         paper.images.append(metadata)
@@ -210,20 +211,97 @@ class PDFFigures2Extractor:
         return None
 
     def _process_figure(
-        self, fig_data: dict[str, Any], output_dir: Path, arxiv_id: str
+        self,
+        fig_data: dict[str, Any],
+        output_dir: Path,
+        arxiv_id: str,
+        temp_dir: Path,
     ) -> ImageMetadata | None:
         """Process a single figure from pdffigures2 output.
-
-        This is a stub implementation that will be fully implemented in the next task.
-        For now, it returns None to satisfy the interface.
 
         Args:
             fig_data: Figure data from pdffigures2 JSON output.
             output_dir: Directory to save extracted figures.
             arxiv_id: arXiv ID of the paper.
+            temp_dir: Temporary directory containing pdffigures2 output.
 
         Returns:
             ImageMetadata object, or None if processing failed.
         """
-        # Stub implementation - will be fully implemented in next task
-        return None
+        # Get figure type
+        fig_type = fig_data.get("figType")
+        if fig_type not in ["Figure", "Table"]:
+            return None
+
+        # Filter by extraction settings
+        if fig_type == "Figure" and not self.extract_figures:
+            return None
+        if fig_type == "Table" and not self.extract_tables:
+            return None
+
+        # Get figure name
+        fig_name = fig_data.get("name", "")
+        if not fig_name:
+            return None
+
+        # Find original image file in temp_dir
+        # pdffigures2 naming: {arxiv_id}-{figType}{name}-{index}.png
+        # We need to find any file matching this pattern
+        pattern = f"{arxiv_id}-{fig_type}{fig_name}-*.png"
+        matching_files = list(temp_dir.glob(pattern))
+
+        if not matching_files:
+            # Try alternative pattern without index
+            pattern = f"{arxiv_id}-{fig_type}{fig_name}.png"
+            matching_files = list(temp_dir.glob(pattern))
+
+        if not matching_files:
+            logger.warning(
+                "Could not find image file for %s %s in paper %s",
+                fig_type,
+                fig_name,
+                arxiv_id,
+            )
+            return None
+
+        # Use the first matching file
+        original_image = matching_files[0]
+
+        # Generate new filename: {fig_type}{fig_name}.png (e.g., Figure1.png, Table1.png)
+        new_filename = f"{fig_type}{fig_name}.png"
+        new_path = output_dir / new_filename
+
+        # Copy image from temp_dir to output_dir with new name
+        try:
+            import shutil
+            shutil.copy2(original_image, new_path)
+        except Exception as e:
+            logger.error(
+                "Failed to copy image from %s to %s: %s",
+                original_image,
+                new_path,
+                e,
+            )
+            return None
+
+        # Parse caption - remove figure number prefix like "Figure 1:" or "Table 1:"
+        caption = fig_data.get("caption", "")
+        if caption:
+            # Remove prefix pattern (case-insensitive)
+            caption = re.sub(
+                rf"^{fig_type}\s+{fig_name}:\s*", "", caption, flags=re.IGNORECASE
+            )
+
+        # Get page number (convert 0-based to 1-based)
+        page = fig_data.get("page", 0)
+        page_number = page + 1
+
+        # Create and return ImageMetadata
+        return ImageMetadata(
+            path=new_path,
+            page_number=page_number,
+            figure_number=fig_name,
+            caption=caption if caption else None,
+            fig_type=fig_type,
+            image_type=fig_type.lower(),
+        )
