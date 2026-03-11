@@ -138,7 +138,8 @@ class PDFFigures2Extractor:
                     data = json.load(f)
 
                 # Process each figure
-                figures = data.get("figures", [])
+                # pdffigures2 JSON is a list directly, not a dict with "figures" key
+                figures = data if isinstance(data, list) else data.get("figures", [])
                 for fig_data in figures[:self.max_figures]:
                     metadata = self._process_figure(
                         fig_data, paper_output_dir, paper.arxiv_id, temp_path
@@ -181,23 +182,20 @@ class PDFFigures2Extractor:
             cmd.extend(self.java_options)
 
         # Build base command
+        # Note: pdffigures2 CLI flags:
+        # -i <value> : DPI to save figures (default 150)
+        # -d <value> : figure-data-prefix for JSON output
+        # -m <value> : figure-prefix for image output
+        # -f <value> : figure format (default png)
         cmd.extend([
             "java",
             "-jar",
             str(self.jar_path),
             str(pdf_path),
-            "-i", str(temp_dir),
-            "-d", str(self.dpi),
+            "-i", str(self.dpi),
+            "-d", str(temp_dir / "data_output"),
+            "-m", str(temp_dir / "figures_output"),
         ])
-
-        # Add extraction options
-        if self.extract_figures:
-            cmd.append("-f")
-        if self.extract_tables:
-            cmd.append("-t")
-
-        # Add max figures limit
-        cmd.extend(["-m", str(self.max_figures)])
 
         return cmd
 
@@ -250,28 +248,40 @@ class PDFFigures2Extractor:
         if not fig_name:
             return None
 
-        # Find original image file in temp_dir
-        # pdffigures2 naming: {arxiv_id}-{figType}{name}-{index}.png
-        # We need to find any file matching this pattern
-        pattern = f"{arxiv_id}-{fig_type}{fig_name}-*.png"
-        matching_files = list(temp_dir.glob(pattern))
-
-        if not matching_files:
-            # Try alternative pattern without index
-            pattern = f"{arxiv_id}-{fig_type}{fig_name}.png"
+        # Check if renderURL is provided in JSON data
+        render_url = fig_data.get("renderURL", "")
+        if render_url:
+            # Use the renderURL to find the image file
+            original_image = temp_dir / render_url
+            if not original_image.exists():
+                logger.warning(
+                    "Could not find image file from renderURL: %s",
+                    original_image,
+                )
+                return None
+        else:
+            # Fallback to pattern matching
+            # pdffigures2 naming: figures_output{pdf_filename}-{figType}{name}-{index}.png
+            # We need to find any file matching this pattern
+            pattern = f"figures_output*-{fig_type}{fig_name}-*.png"
             matching_files = list(temp_dir.glob(pattern))
 
-        if not matching_files:
-            logger.warning(
-                "Could not find image file for %s %s in paper %s",
-                fig_type,
-                fig_name,
-                arxiv_id,
-            )
-            return None
+            if not matching_files:
+                # Try alternative pattern without index
+                pattern = f"figures_output*-{fig_type}{fig_name}.png"
+                matching_files = list(temp_dir.glob(pattern))
 
-        # Use the first matching file
-        original_image = matching_files[0]
+            if not matching_files:
+                logger.warning(
+                    "Could not find image file for %s %s in paper %s",
+                    fig_type,
+                    fig_name,
+                    arxiv_id,
+                )
+                return None
+
+            # Use the first matching file
+            original_image = matching_files[0]
 
         # Generate new filename: {fig_type}{fig_name}.png (e.g., Figure1.png, Table1.png)
         new_filename = f"{fig_type}{fig_name}.png"
