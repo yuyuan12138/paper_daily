@@ -1,107 +1,69 @@
-# Paper Daily
+# Paper Daily 🚀
 
-Automated paper retrieval, analysis, and summarization system.
+> Your personal AI research assistant for staying up-to-date with the latest papers!
 
-## Features
+## ✨ Features
 
-- Fetch papers from arXiv by keywords and categories
-- Download PDFs automatically
-- Extract text content from PDFs
-- **Extract images from papers with captions** (using PyMuPDF or PDFFigures2)
-- **Analyze images using multimodal AI** (QwenVL via SiliconFlow)
-- Generate AI-powered summaries using DeepSeek (or OpenAI/Anthropic)
-- Output structured Markdown documents
-- Track processing state with file integrity verification
-- **Concurrent API calls** for faster processing
+- 🔍 **Smart Search** - Fetch papers from arXiv by keywords and categories
+- 📥 **Auto Download** - Download PDFs automatically
+- 📖 **Text Extraction** - Extract text content from PDFs
+- 🖼️ **Image Extraction** - Extract figures & tables with captions (PyMuPDF or PDFFigures2)
+- 🤖 **AI Analysis** - Analyze images using multimodal LLMs (QwenVL via SiliconFlow)
+- 📝 **Smart Summaries** - Generate AI-powered summaries (DeepSeek, OpenAI, Anthropic)
+- 📄 **Markdown Output** - Beautiful structured Markdown documents
+- 🔐 **State Tracking** - File integrity verification
+- ⚡ **Concurrent API** - Parallel processing for speed
 
-## Installation
+## 🚀 Quick Start
 
-### 1. Install Dependencies
+### 1. Install
 
 ```bash
-# Install project dependencies
 uv pip install -e .
 ```
 
 ### 2. Set API Keys
 
-You need at least one LLM API key:
-
 ```bash
 # For summarization (DeepSeek - recommended)
-export DEEPSEEK_API_KEY="your-deepseek-api-key"
+export DEEPSEEK_API_KEY="your-key"
 
 # For image analysis (SiliconFlow - supports QwenVL)
-export SILICONFLOW_API_KEY="your-siliconflow-api-key"
+export SILICONFLOW_API_KEY="your-key"
 ```
 
-**Get API Keys:**
-- DeepSeek: https://platform.deepseek.com/
-- SiliconFlow: https://cloud.siliconflow.cn/
+> 📚 Get your keys: [DeepSeek](https://platform.deepseek.com/) | [SiliconFlow](https://cloud.siliconflow.cn/)
 
 ### 3. (Optional) Compile PDFFigures2
 
-For better image extraction with captions:
+Better image extraction with captions:
 
 ```bash
-cd pdffigures2
-sbt assembly
+cd pdffsbt assembly
+igures2
 ```
 
-## Configuration
+## ⚙️ Configuration
 
 Edit `config/config.yaml`:
 
 ```yaml
-# arXiv query settings
 query:
   keywords: ["large language model"]
-  categories: []
   max_results: 10
 
-# Pipeline settings
 pipeline:
-  download_pdf: true
-  parse_pdf: true
-  summarize: true
-  output_markdown: true
   language: zh  # or en
-  summary_level: standard
+  multi_step_enabled: false  # 🔄 Enable for detailed analysis
 
-# Vision (image extraction and analysis)
 vision:
   enabled: true
-  extractor: pdffigures2  # or "pymupdf"
-
-  # PDFFigures2 settings
+  extractor: pdffigures2
   pdffigures2_jar: "/path/to/pdffigures2.jar"
-  pdffigures2_dpi: 150
-  pdffigures2_extract_figures: true
-  pdffigures2_extract_tables: true
-  pdffigures2_max_figures: 20
 
-  # Image analysis (multimodal LLM) - optional
-  analysis:
-    enabled: false  # Set to true to enable
-    provider: "openai-compatible"
-    model_name: "Qwen/Qwen3-VL-30B-A3B-Instruct"
-    api_key_env: "SILICONFLOW_API_KEY"
-    base_url: "https://api.siliconflow.cn/v1"
-    max_tokens: 2000
-    max_concurrency: 5  # Concurrent API calls
-
-  storage:
-    output_dir: ./data/images
-
-# Summarization model
 model:
   provider: deepseek
-  base_url: "https://api.deepseek.com/v1"
-  model_name: "deepseek-chat"
-  api_key_env: DEEPSEEK_API_KEY
-  temperature: 0.2
-  max_tokens: 4000
-  max_concurrency: 5  # Concurrent API calls
+  max_concurrency: 5
 ```
 
 ### Configuration Options
@@ -109,107 +71,95 @@ model:
 | Option | Description | Default |
 |--------|-------------|---------|
 | `query.keywords` | Search keywords | `["large language model"]` |
-| `query.max_results` | Max papers per run | `10` |
 | `pipeline.language` | Summary language | `zh` |
 | `vision.enabled` | Enable image extraction | `false` |
-| `vision.extractor` | Image extractor | `pymupdf` |
-| `vision.analysis.enabled` | Enable image analysis (⚠️ in development) | `false` |
-| `vision.analysis.max_concurrency` | Max concurrent API calls | `5` |
-| `model.max_concurrency` | Max concurrent summarization | `5` |
+| `vision.analysis.enabled` | Enable image analysis ⚠️ | `false` |
+| `multi_step_enabled` | Multi-step analysis | `false` |
 
-> ⚠️ **Note**: Image analysis (`vision.analysis.enabled`) is currently in development and may produce inconsistent results. It is recommended to keep it disabled for now.
+> ⚠️ **Note**: Image analysis is in development - results may vary!
 
-## Usage
-
-### Basic Usage
+## 🎯 Usage
 
 ```bash
-# Run pipeline (use env vars or prefix commands)
+# Basic run
 DEEPSEEK_API_KEY=xxx uv run main.py
 
-# Or with SiliconFlow for image analysis
+# With image analysis
 DEEPSEEK_API_KEY=xxx SILICONFLOW_API_KEY=xxx uv run main.py
-```
 
-### Command Line Options
-
-```bash
-# Process max papers
+# Limit papers
 uv run main.py --max-papers 5
 
-# Dry run (no downloads/processing)
+# Dry run
 uv run main.py --dry-run
-
-# Custom config
-uv run main.py --config path/to/config.yaml
 ```
 
-### Management Commands
+### 🛠️ Management Commands
 
 ```bash
-# Clean up invalid state entries (missing files)
+# Clean up invalid entries
 uv run main.py cleanup
 
-# Preview cleanup without removing
-uv run main.py cleanup --dry-run
-
-# Invalidate a paper (force reprocessing)
+# Force reprocess a paper
 uv run main.py invalidate 2603.09964
 ```
 
-## Output
+## 📊 Multi-Step Analysis
 
-```
-data/
-├── pdfs/           # Downloaded PDF files
-├── summaries/      # Generated Markdown summaries
-│   └── {arxiv_id}_{title}.md
-└── images/        # Extracted images
-    └── {arxiv_id}/
-        ├── Figure1.png
-        └── Table1.png
-```
-
-### Summary Format
-
-Generated Markdown includes:
-
-- **Metadata**: arXiv ID, authors, date, categories
-- **Abstract**: Original paper abstract
-- **Summary** (AI-generated):
-  - Single-step mode: Research Problem, Core Method, Contributions, Experiments, Limitations, Keywords, Applicable Scenarios, Figures
-  - Multi-step mode:
-    - 粗筛 (Screening): Core problem, contributions, innovation, relevance, potential risks, reading suggestion
-    - 粗读 (Quick Reading): Research question, hypothesis, method overview, model I/O, experiments, results, limitations
-    - 精读 (Deep Reading): Method pipeline, core modules, design rationale, novel parts, assumptions, performance sources
-    - 实验分析 (Experiment Analysis): Core claims, experiment alignment, baseline quality, ablation, strongest/weaker evidence
-- **Figures and Tables**: Images with captions
-
-### Multi-Step Analysis
-
-Enable detailed multi-step analysis in `config.yaml`:
+Enable detailed analysis in `config.yaml`:
 
 ```yaml
 pipeline:
   multi_step_enabled: true
   multi_step_steps:
-    - screening    # 粗筛 - Initial screening
-    - quick        # 粗读 - Quick reading
-    - deep        # 精读 - Deep analysis
-    - experiments  # 实验分析 - Experiment analysis
-    # - reproducibility  # 复现/落地
-    # - inspiration     # 研究启发
+    - screening    # 🔍 Initial screening
+    - quick        # 📖 Quick reading
+    - deep         # 🧠 Deep analysis
+    - experiments  # 🔬 Experiment analysis
 ```
 
-Each step makes a separate API call for more detailed analysis.
+Each step = one API call = more detailed insights! 🎉
 
-## Requirements
+## 📁 Output
+
+```
+data/
+├── pdfs/           # 📄 Downloaded PDFs
+├── summaries/      # 📝 Generated Markdown
+│   └── {id}_{title}.md
+└── images/        # 🖼️ Extracted images
+    └── {id}/
+        ├── Figure1.png
+        └── Table1.png
+```
+
+## 🎨 Summary Format
+
+```markdown
+## Metadata
+- arXiv ID, Authors, Date...
+
+## Abstract
+Original abstract
+
+## Summary
+- 🔍 粗筛: Core problem, relevance, reading suggestion
+- 📖 粗读: Research question, method overview, results
+- 🧠 精读: Technical details, modules, design rationale
+- 🔬 实验分析: Claims, baselines, evidence
+
+## Figures and Tables
+![Image](path/to/image.png)
+*Caption*
+```
+
+## 🖥️ Requirements
 
 - Python 3.13+
-- uv (package manager)
+- uv package manager
 - Java 11+ (for PDFFigures2)
-- API key for LLM provider
+- API key (DeepSeek/OpenAI/Anthropic)
 
-## License
+## 📄 License
 
-MIT
+MIT 🎉
