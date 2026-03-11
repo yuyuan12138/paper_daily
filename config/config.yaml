@@ -25,6 +25,8 @@ vision:
     skip_duplicates: true
 
   # PDFFigures2 extractor options (when extractor: pdffigures2)
+  # REQUIRED: Update this path to your compiled pdffigures2 JAR file
+  # Compile with: cd pdffigures2 && sbt assembly
   pdffigures2_jar: "/path/to/pdffigures2/target/scala-2.13/pdffigures2-assembly-*.jar"
   pdffigures2_dpi: 150
   pdffigures2_extract_figures: true
