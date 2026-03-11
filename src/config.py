@@ -90,6 +90,13 @@ class VisionConfig(BaseModel):
     extraction: VisionExtractionConfig = Field(default_factory=VisionExtractionConfig)
     analysis: VisionAnalysisConfig | None = None
     storage: VisionStorageConfig = Field(default_factory=VisionStorageConfig)
+    extractor: Literal["pymupdf", "pdffigures2"] = "pymupdf"
+    pdffigures2_jar: str | None = None
+    pdffigures2_dpi: int = Field(gt=0, default=150)
+    pdffigures2_extract_figures: bool = True
+    pdffigures2_extract_tables: bool = True
+    pdffigures2_max_figures: int = Field(gt=0, le=50, default=20)
+    pdffigures2_java_options: list[str] | None = None
 
 
 class Config(BaseModel):
