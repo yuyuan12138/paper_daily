@@ -13,6 +13,31 @@ pipeline:
   language: zh
   summary_level: standard
 
+vision:
+  enabled: true
+  extractor: pdffigures2  # Options: "pymupdf" or "pdffigures2"
+
+  # PyMuPDF extractor options (when extractor: pymupdf)
+  extraction:
+    min_size: [100, 100]
+    max_aspect_ratio: 5.0
+    max_images_per_paper: 15
+    skip_duplicates: true
+
+  # PDFFigures2 extractor options (when extractor: pdffigures2)
+  pdffigures2_jar: "/path/to/pdffigures2/target/scala-2.13/pdffigures2-assembly-*.jar"
+  pdffigures2_dpi: 150
+  pdffigures2_extract_figures: true
+  pdffigures2_extract_tables: true
+  pdffigures2_max_figures: 20
+  pdffigures2_java_options:
+    - "-Xmx2g"
+    - "-Dsun.java2d.cmm=sun.java2d.cmm.kcms.KcmsServiceProvider"
+
+  storage:
+    output_dir: ./data/images
+    format: png
+
 model:
   provider: deepseek
   base_url: "https://api.deepseek.com/v1"
