@@ -12,7 +12,7 @@ from downloader import PDFDownloader
 from parser import PDFParser
 from summarizer import PaperSummarizer
 from renderer import MarkdownRenderer
-from image_extractor import ImageExtractor
+from extractor_factory import ExtractorFactory
 from image_analyzer import ImageAnalyzer
 
 logging.basicConfig(
@@ -50,11 +50,8 @@ class PipelineRunner:
 
         # Initialize image modules if enabled
         if config.vision.enabled:
-            self.image_extractor = ImageExtractor(
-                min_size=config.vision.extraction.min_size,
-                max_aspect_ratio=config.vision.extraction.max_aspect_ratio,
-                max_images_per_paper=config.vision.extraction.max_images_per_paper,
-                skip_duplicates=config.vision.extraction.skip_duplicates,
+            self.image_extractor = ExtractorFactory.create(
+                config.vision,
                 output_dir=config.vision.storage.output_dir,
             )
             # Only initialize analyzer if analysis config is provided
