@@ -87,7 +87,8 @@ vision:
   enabled: true
   extractor: pdffigures2
   # REQUIRED: Update this path to your compiled pdffigures2 JAR file
-  pdffigures2_jar: "/absolute/path/to/pdffigures2/target/scala-2.13/pdffigures2-assembly-*.jar"
+  # Note: Use the exact JAR filename (wildcards won't work)
+  pdffigures2_jar: "/absolute/path/to/pdffigures2/target/scala-2.13/pdffigures2-assembly-0.0.9-SNAPSHOT.jar"
 ```
 
 **Benefits of PDFFigures2:**
