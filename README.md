@@ -64,6 +64,42 @@ model:
 | `vision.extraction.max_images_per_paper` | Maximum images to extract | `15` |
 | `vision.analysis` | Image analysis config (optional) | `null` |
 
+### PDFFigures2 Integration
+
+The project supports two image extraction backends:
+
+1. **PyMuPDF (default)**: Fast Python-based extraction using PyMuPDF
+2. **PDFFigures2**: More precise extraction with better caption detection and Figure/Table classification
+
+#### Using PDFFigures2
+
+First, compile the JAR:
+
+```bash
+cd pdffigures2
+sbt assembly
+```
+
+Then configure in `config.yaml`:
+
+```yaml
+vision:
+  enabled: true
+  extractor: pdffigures2
+  # REQUIRED: Update this path to your compiled pdffigures2 JAR file
+  pdffigures2_jar: "/absolute/path/to/pdffigures2/target/scala-2.13/pdffigures2-assembly-*.jar"
+```
+
+**Benefits of PDFFigures2:**
+- Better figure boundary detection
+- Accurate caption extraction
+- Automatic Figure/Table classification
+- Handles multi-column layouts better
+
+**Output naming:**
+- PyMuPDF: `figure_{page}_{index}.png`
+- PDFFigures2: `Figure1.png`, `Table1.png`, etc.
+
 ## Usage
 
 ```bash
