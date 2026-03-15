@@ -33,7 +33,7 @@ class MarkdownRenderer:
         filename = self._sanitize_filename(f"{paper.arxiv_id}_{paper.title[:50]}")
         output_path = self.output_dir / f"{filename}.md"
 
-        content = self._generate_content(paper, output_path)
+        content = self._generate_content(paper)
         output_path.write_text(content)
 
         return output_path
@@ -63,28 +63,7 @@ class MarkdownRenderer:
             else:
                 lines.append(f"{'  ' * indent}**{key}**: {value}")
 
-    def _get_relative_image_path(self, image_path: Path, markdown_path: Path) -> str:
-        """Calculate relative path from markdown file to image.
-
-        Args:
-            image_path: Absolute or relative path to image.
-            markdown_path: Path where markdown file will be saved.
-
-        Returns:
-            Relative path string from markdown file to image.
-        """
-        image_path = Path(image_path)
-        markdown_dir = markdown_path.parent
-
-        # If image_path is relative, make it absolute relative to project root
-        if not image_path.is_absolute():
-            image_path = self.project_root / image_path
-
-        # Use os.path.relpath to calculate relative path
-        import os
-        return os.path.relpath(image_path, markdown_dir)
-
-    def _generate_content(self, paper: Paper, markdown_path: Path) -> str:
+    def _generate_content(self, paper: Paper) -> str:
         """Generate Markdown content."""
         lines = []
 
@@ -166,33 +145,6 @@ class MarkdownRenderer:
             lines.append("## Summary")
             lines.append("*No summary available.*")
             lines.append("")
-
-        # Images section (if available)
-        if paper.images:
-            lines.append("## Figures and Tables")
-            lines.append("")
-
-            for image in paper.images:
-                # Get fig_type, default to "Figure" if None
-                fig_type = image.fig_type if image.fig_type else "Figure"
-
-                # Create heading with figure/table type and number
-                if image.figure_number:
-                    lines.append(f"### {fig_type} {image.figure_number}")
-                else:
-                    lines.append(f"### {fig_type}")
-
-                # Calculate relative path for markdown link
-                relative_image_path = self._get_relative_image_path(image.path, markdown_path)
-
-                # Add image markdown
-                lines.append(f"![{fig_type} {image.figure_number or ''}]({relative_image_path})")
-                lines.append("")
-
-                # Add caption in italics if it exists
-                if image.caption:
-                    lines.append(f"*{image.caption}*")
-                    lines.append("")
 
         # Footer
         lines.append("---")

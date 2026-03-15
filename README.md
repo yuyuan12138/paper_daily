@@ -7,8 +7,6 @@
 - 🔍 **Smart Search** - Fetch papers from arXiv by keywords and categories
 - 📥 **Auto Download** - Download PDFs automatically
 - 📖 **Text Extraction** - Extract text content from PDFs
-- 🖼️ **Image Extraction** - Extract figures & tables with captions (PyMuPDF or PDFFigures2)
-- 🤖 **AI Analysis** - Analyze images using multimodal LLMs (QwenVL via SiliconFlow)
 - 📝 **Smart Summaries** - Generate AI-powered summaries (DeepSeek, OpenAI, Anthropic)
 - 📄 **Markdown Output** - Beautiful structured Markdown documents
 - 🔐 **State Tracking** - File integrity verification
@@ -27,37 +25,9 @@ uv pip install -e .
 ```bash
 # For summarization (DeepSeek - recommended)
 export DEEPSEEK_API_KEY="your-key"
-
-# For image analysis (SiliconFlow - supports QwenVL)
-export SILICONFLOW_API_KEY="your-key"
 ```
 
-> 📚 Get your keys: [DeepSeek](https://platform.deepseek.com/) | [SiliconFlow](https://cloud.siliconflow.cn/)
-
-### 3. (Optional) PDFFigures2 Setup
-
-Better image extraction with captions & table detection:
-
-```bash
-# Install Java 11+ and sbt first
-# On macOS: brew install openjdk@11 sbt
-# On Ubuntu: apt install openjdk-11-jdk sbt
-
-# Build pdffigures2
-cd pdffigures2
-sbt assembly
-
-# This creates: target/scala-2.13/pdffigures2-assembly-*.jar
-```
-
-Then update `config.yaml`:
-
-```yaml
-vision:
-  enabled: true
-  extractor: pdffigures2
-  pdffigures2_jar: "./pdffigures2/target/scala-2.13/pdffigures2-assembly-*.jar"
-```
+> 📚 Get your keys: [DeepSeek](https://platform.deepseek.com/)
 
 ## ⚙️ Configuration
 
@@ -72,11 +42,6 @@ pipeline:
   language: zh  # or en
   multi_step_enabled: false  # 🔄 Enable for detailed analysis
 
-vision:
-  enabled: true
-  extractor: pdffigures2
-  pdffigures2_jar: "/path/to/pdffigures2.jar"
-
 model:
   provider: deepseek
   max_concurrency: 5
@@ -88,20 +53,13 @@ model:
 |--------|-------------|---------|
 | `query.keywords` | Search keywords | `["large language model"]` |
 | `pipeline.language` | Summary language | `zh` |
-| `vision.enabled` | Enable image extraction | `false` |
-| `vision.analysis.enabled` | Enable image analysis ⚠️ | `false` |
 | `multi_step_enabled` | Multi-step analysis | `false` |
-
-> ⚠️ **Note**: Image analysis is in development - results may vary!
 
 ## 🎯 Usage
 
 ```bash
 # Basic run
 DEEPSEEK_API_KEY=xxx uv run main.py
-
-# With image analysis
-DEEPSEEK_API_KEY=xxx SILICONFLOW_API_KEY=xxx uv run main.py
 
 # Limit papers
 uv run main.py --max-papers 5
@@ -141,12 +99,8 @@ Each step = one API call = more detailed insights! 🎉
 ```
 data/
 ├── pdfs/           # 📄 Downloaded PDFs
-├── summaries/      # 📝 Generated Markdown
-│   └── {id}_{title}.md
-└── images/        # 🖼️ Extracted images
-    └── {id}/
-        ├── Figure1.png
-        └── Table1.png
+└── summaries/      # 📝 Generated Markdown
+    └── {id}_{title}.md
 ```
 
 ## 🎨 Summary Format
@@ -163,17 +117,12 @@ Original abstract
 - 📖 粗读: Research question, method overview, results
 - 🧠 精读: Technical details, modules, design rationale
 - 🔬 实验分析: Claims, baselines, evidence
-
-## Figures and Tables
-![Image](path/to/image.png)
-*Caption*
 ```
 
 ## 🖥️ Requirements
 
 - Python 3.13+
 - uv package manager
-- Java 11+ (for PDFFigures2)
 - API key (DeepSeek/OpenAI/Anthropic)
 
 ## 📄 License

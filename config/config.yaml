@@ -1,7 +1,7 @@
 query:
-  keywords: ["large language model"]
+  keywords: ["large language model", "computational psychology", "standarized patient"]
   categories: []
-  max_results: 10
+  max_results: 3 
   sort_by: submittedDate
   sort_order: descending
 
@@ -20,44 +20,6 @@ pipeline:
     - quick
     - deep
     - experiments
-
-vision:
-  enabled: true
-  extractor: pdffigures2  # Options: "pymupdf" or "pdffigures2"
-
-  # PyMuPDF extractor options (when extractor: pymupdf)
-  extraction:
-    min_size: [100, 100]
-    max_aspect_ratio: 5.0
-    max_images_per_paper: 15
-    skip_duplicates: true
-
-  # PDFFigures2 extractor options (when extractor: pdffigures2)
-  # REQUIRED: Update this path to your compiled pdffigures2 JAR file
-  # Compile with: cd pdffigures2 && sbt assembly
-  pdffigures2_jar: "/home/yuyuan/paper_daily/pdffigures2/pdffigures2.jar"
-  pdffigures2_dpi: 150
-  pdffigures2_extract_figures: true
-  pdffigures2_extract_tables: true
-  pdffigures2_max_figures: 20
-  pdffigures2_java_options:
-    - "-Xmx2g"
-    - "-Dsun.java2d.cmm=sun.java2d.cmm.kcms.KcmsServiceProvider"
-
-  storage:
-    output_dir: ./data/images
-    format: png
-
-  # Image analysis using multimodal LLM (siliconflow)
-  analysis:
-    enabled: false  # Set to true to enable image analysis (⚠️ in development, may produce inconsistent results)
-    provider: "openai-compatible"
-    model_name: "Qwen/Qwen3-VL-30B-A3B-Instruct"
-    api_key_env: "SILICONFLOW_API_KEY"
-    base_url: "https://api.siliconflow.cn/v1"
-    max_tokens: 2000
-    batch_size: 5
-    max_concurrency: 5  # Max concurrent API calls for image analysis
 
 model:
   provider: deepseek

@@ -7,8 +7,6 @@
 - 🔍 **智能搜索** - 根据关键词和分类从arXiv获取论文
 - 📥 **自动下载** - 自动下载PDF文件
 - 📖 **文本提取** - 从PDF中提取文本内容
-- 🖼️ **图片提取** - 提取图表并附带标题（PyMuPDF或PDFFigures2）
-- 🤖 **AI分析** - 使用多模态LLM分析图片（SiliconFlow QwenVL）
 - 📝 **智能摘要** - AI生成摘要（DeepSeek、OpenAI、Anthropic）
 - 📄 **Markdown输出** - 优美的结构化文档
 - 🔐 **状态跟踪** - 文件完整性验证
@@ -27,37 +25,9 @@ uv pip install -e .
 ```bash
 # 摘要生成（推荐DeepSeek）
 export DEEPSEEK_API_KEY="your-key"
-
-# 图片分析（SiliconFlow QwenVL）
-export SILICONFLOW_API_KEY="your-key"
 ```
 
-> 📚 获取密钥：[DeepSeek](https://platform.deepseek.com/) | [SiliconFlow](https://cloud.siliconflow.cn/)
-
-### 3.（可选）PDFFigures2 安装
-
-更好的图片提取（带标题和表格检测）：
-
-```bash
-# 首先安装 Java 11+ 和 sbt
-# macOS: brew install openjdk@11 sbt
-# Ubuntu: apt install openjdk-11-jdk sbt
-
-# 编译 pdffigures2
-cd pdffigures2
-sbt assembly
-
-# 编译完成后生成: target/scala-2.13/pdffigures2-assembly-*.jar
-```
-
-然后更新 `config.yaml`：
-
-```yaml
-vision:
-  enabled: true
-  extractor: pdffigures2
-  pdffigures2_jar: "./pdffigures2/target/scala-2.13/pdffigures2-assembly-*.jar"
-```
+> 📚 获取密钥：[DeepSeek](https://platform.deepseek.com/)
 
 ## ⚙️ 配置
 
@@ -72,11 +42,6 @@ pipeline:
   language: zh  # 或 en
   multi_step_enabled: false  # 🔄 启用详细分析
 
-vision:
-  enabled: true
-  extractor: pdffigures2
-  pdffigures2_jar: "/path/to/pdffigures2.jar"
-
 model:
   provider: deepseek
   max_concurrency: 5
@@ -88,20 +53,13 @@ model:
 |------|------|--------|
 | `query.keywords` | 搜索关键词 | `["large language model"]` |
 | `pipeline.language` | 摘要语言 | `zh` |
-| `vision.enabled` | 启用图片提取 | `false` |
-| `vision.analysis.enabled` | 启用图片分析 ⚠️ | `false` |
 | `multi_step_enabled` | 多步骤分析 | `false` |
-
-> ⚠️ **注意**：图片分析功能正在开发中，结果可能不稳定！
 
 ## 🎯 使用方法
 
 ```bash
 # 基本运行
 DEEPSEEK_API_KEY=xxx uv run main.py
-
-# 启用图片分析
-DEEPSEEK_API_KEY=xxx SILICONFLOW_API_KEY=xxx uv run main.py
 
 # 限制论文数量
 uv run main.py --max-papers 5
@@ -141,12 +99,8 @@ pipeline:
 ```
 data/
 ├── pdfs/           # 📄 下载的PDF文件
-├── summaries/      # 📝 生成的Markdown
-│   └── {id}_{title}.md
-└── images/       # 🖼️ 提取的图片
-    └── {id}/
-        ├── Figure1.png
-        └── Table1.png
+└── summaries/      # 📝 生成的Markdown
+    └── {id}_{title}.md
 ```
 
 ## 🎨 摘要格式
@@ -163,17 +117,12 @@ data/
 - 📖 粗读: 研究问题、方法概览、主要结果
 - 🧠 精读: 技术细节、模块、设计理由
 - 🔬 实验分析: 核心论点、baseline、证据
-
-## 图表
-![图片](path/to/image.png)
-*图注*
 ```
 
 ## 🖥️ 环境要求
 
 - Python 3.13+
 - uv包管理器
-- Java 11+（用于PDFFigures2）
 - API密钥（DeepSeek/OpenAI/Anthropic）
 
 ## 📄 许可证

@@ -1,11 +1,10 @@
+LICENSE
 README.md
 pyproject.toml
 src/__init__.py
 src/config.py
 src/downloader.py
 src/fetcher.py
-src/image_analyzer.py
-src/image_extractor.py
 src/models.py
 src/parser.py
 src/renderer.py

@@ -8,7 +8,7 @@ from pathlib import Path
 from openai import AsyncOpenAI
 
 from config import ModelConfig
-from models import ImageMetadata, Paper, PaperStatus
+from models import Paper, PaperStatus
 
 logger = logging.getLogger(__name__)
 
@@ -145,44 +145,6 @@ class PaperSummarizer:
 
         return json.loads(json_text)
 
-    def _create_prompt_with_images_context(self, images: list[ImageMetadata]) -> str:
-        """Create image context string for prompts.
-
-        Args:
-            images: List of ImageMetadata objects with analysis or captions
-
-        Returns:
-            Formatted image context string, or empty string if no images
-        """
-        if not images:
-            return ""
-
-        image_sections = []
-        for idx, image in enumerate(images, start=1):
-            # Use LLM analysis if available
-            if image.analysis:
-                key_findings = ", ".join(image.analysis.key_findings)
-                section = (
-                    f"Figure {idx} (Page {image.page_number}):\n"
-                    f"- Description: {image.analysis.description}\n"
-                    f"- Key Findings: {key_findings}\n"
-                    f"- Relevance: {image.analysis.relevance}"
-                )
-            # Fall back to extracted caption
-            elif image.caption or image.figure_number:
-                fig_num = image.figure_number or f"{idx}"
-                caption = image.caption or "No caption available"
-                section = (
-                    f"Figure {fig_num} (Page {image.page_number}):\n"
-                    f"- Caption: {caption}"
-                )
-            else:
-                continue  # Skip images with no context
-
-            image_sections.append(section)
-
-        return "\n\n".join(image_sections)
-
     def _create_prompt(self, paper: Paper) -> str:
         """Create prompt from template."""
         template_name = f"summary_{self.language}.md"
@@ -198,29 +160,13 @@ class PaperSummarizer:
         max_chars = 15000
         text = paper.parsed_text[:max_chars]
 
-        # Get analyzed images
-        analyzed_images = [img for img in paper.images if img.analysis]
-
-        # Create image context
-        images_context = self._create_prompt_with_images_context(analyzed_images)
-
-        # Load image analysis template if there are analyzed images
-        if images_context:
-            image_template_path = self.prompts_dir / "image_analysis.md"
-            if image_template_path.exists():
-                with image_template_path.open() as f:
-                    image_template = f.read()
-                images_context = image_template.format(images_content=images_context)
-            else:
-                images_context = f"## Figures Analysis\n\n{images_context}\n\nWhen describing the paper's contributions, reference specific figures by number."
-
         return template.format(
             paper_title=paper.title,
             abstract=paper.abstract,
             full_text=text,
             language=self.language,
             summary_level=self.summary_level,
-            images_context=images_context,
+            images_context="",
         )
 
     async def _call_llm(self, prompt: str) -> str:

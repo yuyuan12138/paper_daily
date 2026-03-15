@@ -59,52 +59,6 @@ class RuntimeConfig(BaseModel):
     continue_on_error: bool = True
 
 
-class VisionExtractionConfig(BaseModel):
-    """Configuration for image extraction from PDFs."""
-
-    min_size: tuple[int, int] = (200, 200)
-    max_aspect_ratio: float = 3.0
-    max_images_per_paper: int = Field(gt=0, le=50, default=20)
-    skip_duplicates: bool = True
-
-
-class VisionAnalysisConfig(BaseModel):
-    """Configuration for image analysis using LLMs."""
-
-    enabled: bool = False  # New: control whether to enable image analysis
-    provider: Literal["openai", "anthropic", "openai-compatible"] = "openai-compatible"
-    model_name: str = "Qwen/Qwen2-VL-7B-Instruct"
-    api_key_env: str = "SILICONFLOW_API_KEY"
-    base_url: str | None = "https://api.siliconflow.cn/v1"
-    max_tokens: int = Field(gt=0, le=8000, default=2000)
-    batch_size: int = Field(gt=0, le=10, default=5)
-    max_concurrency: int = Field(gt=0, le=20, default=5)  # New: max concurrent API calls
-    include_context: bool = True
-
-
-class VisionStorageConfig(BaseModel):
-    """Configuration for storing extracted images."""
-
-    output_dir: Path = Path("./data/images")
-    format: str = "png"
-
-
-class VisionConfig(BaseModel):
-    """Configuration for vision (image extraction and analysis)."""
-
-    enabled: bool = False
-    extraction: VisionExtractionConfig = Field(default_factory=VisionExtractionConfig)
-    analysis: VisionAnalysisConfig | None = None
-    storage: VisionStorageConfig = Field(default_factory=VisionStorageConfig)
-    extractor: Literal["pymupdf", "pdffigures2"] = "pymupdf"
-    pdffigures2_jar: str | None = None
-    pdffigures2_dpi: int = Field(gt=0, default=150)
-    pdffigures2_extract_figures: bool = True
-    pdffigures2_extract_tables: bool = True
-    pdffigures2_max_figures: int = Field(gt=0, le=50, default=20)
-    pdffigures2_java_options: list[str] | None = None
-
-
 class Config(BaseModel):
     """Main configuration container."""
 
@@ -113,7 +67,6 @@ class Config(BaseModel):
     model: ModelConfig = Field(default_factory=ModelConfig)
     output: OutputConfig = Field(default_factory=OutputConfig)
     runtime: RuntimeConfig = Field(default_factory=RuntimeConfig)
-    vision: VisionConfig = Field(default_factory=VisionConfig)
 
     @classmethod
     def from_yaml(cls, path: Path | str) -> "Config":

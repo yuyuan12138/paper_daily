@@ -82,7 +82,7 @@ def cleanup(
                     removed_reason = f"missing PDF: {pdf_path}"
 
         # Check PDF for downloaded papers
-        elif entry.get("status") in ["downloaded", "parsed", "images_extracted"]:
+        elif entry.get("status") in ["downloaded", "parsed"]:
             pdf_path = entry.get("pdf_path")
             if pdf_path and not Path(pdf_path).exists():
                 removed_reason = f"missing PDF: {pdf_path}"

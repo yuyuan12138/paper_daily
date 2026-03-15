@@ -12,8 +12,6 @@ from downloader import PDFDownloader
 from parser import PDFParser
 from summarizer import PaperSummarizer
 from renderer import MarkdownRenderer
-from extractor_factory import ExtractorFactory
-from image_analyzer import ImageAnalyzer
 
 logging.basicConfig(
     level=logging.INFO,
@@ -49,29 +47,6 @@ class PipelineRunner:
         self.renderer = MarkdownRenderer(
             output_dir=config.output.base_dir / "summaries"
         )
-
-        # Initialize image modules if enabled
-        if config.vision.enabled:
-            self.image_extractor = ExtractorFactory.create(
-                config.vision,
-                output_dir=config.vision.storage.output_dir,
-            )
-            # Only initialize analyzer if analysis config is provided and enabled
-            if config.vision.analysis and config.vision.analysis.enabled:
-                self.image_analyzer = ImageAnalyzer(
-                    provider=config.vision.analysis.provider,
-                    model_name=config.vision.analysis.model_name,
-                    api_key_env=config.vision.analysis.api_key_env,
-                    base_url=config.vision.analysis.base_url,
-                    max_tokens=config.vision.analysis.max_tokens,
-                    batch_size=config.vision.analysis.batch_size,
-                    max_concurrency=config.vision.analysis.max_concurrency,
-                )
-            else:
-                self.image_analyzer = None
-        else:
-            self.image_extractor = None
-            self.image_analyzer = None
 
     async def run(self) -> dict:
         """Execute the pipeline."""
@@ -122,19 +97,6 @@ class PipelineRunner:
                     if paper.status == PaperStatus.failed:
                         failed.append(paper.arxiv_id)
                         continue
-
-                # Extract and analyze images
-                if self.config.vision.enabled and self.config.pipeline.parse_pdf:
-                    try:
-                        paper = await self.image_extractor.extract(paper)
-                        self.state.update_paper_status(paper.arxiv_id, paper.status)
-
-                        if paper.images and self.config.vision.analysis and self.config.vision.analysis.enabled:
-                            paper = await self.image_analyzer.analyze(paper)
-                            self.state.update_paper_status(paper.arxiv_id, paper.status)
-                    except Exception as e:
-                        logger.warning(f"Image processing failed for {paper.arxiv_id}: {e}")
-                        # Continue with text-only summary
 
                 # Summarize
                 if self.config.pipeline.summarize:
